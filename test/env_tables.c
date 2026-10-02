@@ -84,6 +84,10 @@ char     port_names[9][PORT_NAME_SIZE];
 struct flash_region_t flash_region;
 struct syslog_state syslog_state;
 bool     stp_enabled;
+uint32_t diag_loops;
+uint16_t diag_rx_poll;
+uint16_t diag_rx_resets;
+volatile uint32_t ticks;
 
 uip_ipaddr_t uip_hostaddr, uip_draddr, uip_netmask;
 struct uip_eth_addr uip_ethaddr = { .addr = { 0x02, 0x11, 0x22, 0x33, 0x44, 0x55 } };
