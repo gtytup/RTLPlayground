@@ -36,6 +36,12 @@
   - The I2C transfer wait is bounded, so a module holding the bus costs a failed read
     instead of the whole management plane.
 
+- System
+  - `strcpy()` was declared but never implemented, so calls bound to SDCC's library
+    version, whose pointer width does not match the declaration. The only caller is
+    the default-hostname path, so a switch without a `hostname` line in its config
+    came up with an empty hostname. The firmware now ships its own `strcpy()`.
+
 ## Breaking changes
 
 - Config

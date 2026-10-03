@@ -454,6 +454,24 @@ char strcmp(__xdata const uint8_t *a, __code const uint8_t *b)
 }
 
 
+/* The firmware declares strcpy() but never shipped one, so calls bound to
+ * SDCC's library implementation, which takes a generic pointer where this
+ * declaration promises __xdata. That ABI mismatch is upstream #526 and it is
+ * how set_hostname_default() came to leave the hostname empty. Copy here, as
+ * the neighbouring memcpy()/strlen()/strcmp() already do. */
+uint16_t strcpy(__xdata uint8_t *dst, const char *s)
+{
+	uint16_t n = 0;
+
+	while (s[n]) {
+		dst[n] = (uint8_t)s[n];
+		n++;
+	}
+	dst[n] = NUL;
+	return n;
+}
+
+
 /*
  * True when b is a prefix of a. Unlike strcmp() the byte after the match is not
  * compared, and unlike is_word_x() it need not be a separator.
