@@ -901,6 +901,29 @@ void send_storm(void)
 }
 
 
+void send_isolation(void)
+{
+	__xdata uint16_t allow;
+
+	dbg_string("send_isolation called\n");
+	slen = strtox(outbuf, HTTP_RESPONCE_JSON);
+	char_to_html('[');
+	for (uint8_t i = machine.min_port; i <= machine.max_port; i++) {
+		slen += strtox(outbuf + slen, "{\"portNum\":");
+		itoa_html(machine.log_to_phys_port[i]);
+		slen += strtox(outbuf + slen, ",\"allow\":\"");
+		allow = port_isolation_get(i);
+		byte_to_html(allow >> 8);
+		byte_to_html(allow & 0xff);
+		char_to_html('"');
+		char_to_html('}');
+		if (i < machine.max_port)
+			char_to_html(',');
+	}
+	char_to_html(']');
+}
+
+
 void send_mtu(void)
 {
 	dbg_string("send_mtu called\n");
@@ -1133,8 +1156,7 @@ void send_vlanlist(void)
 	slen += strtox(outbuf + slen, ",\"vlan\":[");
 
 	for (i = 1; i < 4095; i++) {
-		if (vlan_get(i) < 0)
-			continue;
+		vlan_get(i);
 		if (!(sfr_data[0] & 0x02)) /* bit 1: VLAN table entry valid */
 			continue;
 

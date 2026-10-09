@@ -22,12 +22,15 @@ The following devices have been tested and are fully working:
 | Keeplink | KP-9000-6XH-X2 / KP-9000-6XHML-X2 | No/Yes | [2M-PCB43-V1.2 / V2.1](devices/KP-9000-6XH-X2.md) |       | 4 + 2 |
 | keepLINK | KP-9000-9XHML-X | Yes     | [2M-PCB23-V2.2](devices/2M-PCB23-V2_2.md)                                 | 2M    | 8 + 1 |
 | keepLINK | KP-9000-9XHML-X | Yes     | [2M-PCB23-V3.1](devices/2M-PCB23-V3_1.md)                                 | 2M    | 8 + 1 |
+| keepLINK | KP-9000-9XHML-X | Yes     | [2M-PCB23-V3.2](devices/2M-PCB23-V3_2.md)                                 | 2M    | 8 + 1 |
 | LIANGUO  | SWTG024AS       | No      | [SWTG024AS-v2.0-17452](devices/SWTG024AS.md)                              | 0.5M  | 4 + 2 |
 | Lianguo  | ZX-SWTGW215AS   | Yes     | [PCB-SWTG115AS-V2.0 / PCB-SWTG115AS-V2.1](devices/SWTGW215AS.md)          | 2M    | 5 + 1 |
 | Lianguo  | HYWS-SGT0108S   | No      | [2G5F_20G_V1.01](devices/HYWS-SGT0108S.md)                                | 0.5M  | 8 + 1 |
 | Mokerlink| 2G040210GSM     | Yes     | [2M-PCB43-V1.1](devices/2M-PCB43-V1.1.md)                                 |       | 4 + 2 |
 | Mokerlink| ZX-SWTGW218AS   | Yes     | [SWTG118AS-V2.0-16029](devices/SWTGW218AS.md)                             | 2M    | 8 + 1 |
 | MokerLink| POE-2G080110GS  | No      | [2M-PCB51-ML-V1.1](devices/2M-PCB51-ML-V1_1.md)                           | 4M    | 8 + 1 |
+| Binardat | 2G06-04210GSM    | No      | [PCB-SWTG024AS-A-2.0.1](devices/ONT-S207CW-62TS-SE.md)                 | 0.5M  | 4 + 2 |
+| ONT      | ONT-S207CW-62TS-SE | No   | [PCB-SWTG024AS-A-2.0.1](devices/ONT-S207CW-62TS-SE.md)                 | 0.5M  | 4 + 2 |
 | Netcore  | GS9             | No      | [PB-2132](devices/PB-2132.md)                                             | 4M    | 8 + 1 |
 | Ruiying  | RY-4GT-2SX      | No      | [FG-4GT-2SX_V2.0](devices/FG-4GT-2SX_V2.0.md)                             | 4M    | 4 + 2 |
 | Ruiying  | RY-8GT-1SX      | No      | [FG-8GT-1SX](devices/FG-8GT-1SX.md)                                       | 1M    | 8 + 1 |
