@@ -20,6 +20,22 @@
   - The web UI and the configuration upload now refuse a line the replay cannot take,
     instead of writing it to flash.
 
+- Web UI
+  - A new connection resets the transfer state, so a reused connection slot can no
+    longer answer the next request from the middle of the previous response.
+  - `/information.json` no longer reads the EEPROM of an empty SFP cage; the CLI and
+    the background poll already checked the module-detect pin.
+
+- Management plane
+  - Rapid HTTP connection churn could park the NIC receive buffer for good. The main
+    loop drained the buffer only while the receive interrupt was raised, so once the
+    NIC stopped raising it the switch stopped answering ICMP, the web UI and the
+    console while the ASIC kept forwarding, and only a power cycle brought it back.
+    The buffer is now drained once per system tick and the NIC is reset if it stays
+    full for five seconds.
+  - The I2C transfer wait is bounded, so a module holding the bus costs a failed read
+    instead of the whole management plane.
+
 ## Breaking changes
 
 - Config
