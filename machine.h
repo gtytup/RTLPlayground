@@ -18,6 +18,12 @@
 // #define MACHINE_KP_9000_6XH_X2_V2_1
 // #define MACHINE_KP_9000_6XHML_X2_V2_1
 
+// Ganwen GW-9000-6XH-X2: same 2M-PCB43-V1.1 layout as the KP-9000-6XH-X2 above,
+// but fitted with a 4 MB Winbond W25Q32JV whose reads are not reliable in DIO
+// mode. This target reads the flash in single-IO mode, see flash_sio in
+// machine.h and doc/devices/KP-9000-6XH-X2.md.
+#define MACHINE_GW_9000_6XH_X2_V1_1
+
 // #define MACHINE_KP_9000_6XH_X
 // #define MACHINE_KP_9000_9XH_X_EU
 // #define MACHINE_KP_9000_9XHML_X_V2_2
@@ -100,6 +106,11 @@ struct machine {
 	uint8_t led_mux_custom;
 	uint8_t led_mux[28];
 	uint32_t mac_flash_offset;
+	// Read the flash with single-IO (0x0B) instead of DIO (0xBB) for MMIO/code
+	// fetch. Set for boards whose flash chip returns corrupted data in DIO mode,
+	// which shows up as garbled console output and random resets. Costs
+	// management-plane speed only, the ASIC keeps forwarding in hardware.
+	uint8_t flash_sio;
 };
 
 struct machine_runtime

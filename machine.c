@@ -32,9 +32,16 @@
 	defined(MACHINE_KP_9000_6XH_X2_V1_1) || \
 	defined(MACHINE_KP_9000_6XHML_X2_V1_1) || \
 	defined(MACHINE_KP_9000_6XH_X2_V1_2) || \
-	defined(MACHINE_KP_9000_6XHML_X2_V1_2)
+	defined(MACHINE_KP_9000_6XHML_X2_V1_2) || \
+	defined(MACHINE_GW_9000_6XH_X2_V1_1)
 __code const struct machine machine = {
-#if defined(MACHINE_KP_9000_6XH_X2_V1_1)
+#if defined(MACHINE_GW_9000_6XH_X2_V1_1)
+	.machine_name = "Ganwen GW-9000-6XH-X2 V1.1",
+	/* The 4 MB Winbond W25Q32JV fitted to this board returns corrupted data
+	 * from the DIO MMIO read, both at the stock divider and at half the clock,
+	 * so code fetch has to use single-IO. */
+	.flash_sio = 1,
+#elif defined(MACHINE_KP_9000_6XH_X2_V1_1)
 	.machine_name = "keepLink KP-9000-6XH V1.1",
 #elif defined(MACHINE_KP_9000_6XHML_X2_V1_1)
 	.machine_name = "keepLink KP-9000-6XHML V1.1",
