@@ -32,9 +32,16 @@
 	defined(MACHINE_KP_9000_6XH_X2_V1_1) || \
 	defined(MACHINE_KP_9000_6XHML_X2_V1_1) || \
 	defined(MACHINE_KP_9000_6XH_X2_V1_2) || \
-	defined(MACHINE_KP_9000_6XHML_X2_V1_2)
+	defined(MACHINE_KP_9000_6XHML_X2_V1_2) || \
+	defined(MACHINE_GW_9000_6XH_X2_V1_1)
 __code const struct machine machine = {
-#if defined(MACHINE_KP_9000_6XH_X2_V1_1)
+#if defined(MACHINE_GW_9000_6XH_X2_V1_1)
+	.machine_name = "Ganwen GW-9000-6XH-X2 V1.1",
+	/* The 4 MB Winbond W25Q32JV fitted to this board returns corrupted data
+	 * from the DIO MMIO read, both at the stock divider and at half the clock,
+	 * so code fetch has to use single-IO. */
+	.flash_sio = 1,
+#elif defined(MACHINE_KP_9000_6XH_X2_V1_1)
 	.machine_name = "keepLink KP-9000-6XH V1.1",
 #elif defined(MACHINE_KP_9000_6XHML_X2_V1_1)
 	.machine_name = "keepLink KP-9000-6XHML V1.1",
@@ -72,6 +79,62 @@ __code const struct machine machine = {
 	 * dual led green: ledset_2 & !ledset_0
 	 * single right led green: ledset_0 & !ledset_1
 	*/
+	.led_sets = { { LEDS_2G5 | LEDS_1G | LEDS_100M | LEDS_10M | LEDS_LINK | LEDS_ACT | LEDS_10G,
+			LEDS_2G5 | LEDS_LINK | LEDS_10G,
+			LEDS_1G | LEDS_LINK,
+			0 },
+		    },
+};
+
+#elif defined MACHINE_2G5F4_10G2_V1_01
+__code const struct machine machine = {
+	.machine_name = "2G5F4_10G2_V1.01 / HYWS-SGT0204S",
+	/* Same board family as the GW-9000-6XH-X2 V1.1 (RTL8372, 4x2.5G + 2xSFP+),
+	 * but the two SFP+ cages (physical ports 5 and 6) are wired in the opposite
+	 * order: physical 5 is on SDS1, physical 6 on SDS0. Copper ports 1-4 match
+	 * the GW-9000 layout. Kept on single-IO flash reads until DIO is verified on
+	 * the fitted T25S40 (512 KB). */
+	.flash_sio = 1,
+	.isRTL8373 = 0,
+	.min_port = 3,
+	.max_port = 8,
+	.n_sfp = 2,
+	.log_to_phys_port = {0, 0, 0, 6, 1, 2, 3, 4, 5},
+	.phys_to_log_port = {4, 5, 6, 7, 8, 3, 0, 0, 0},
+	.is_sfp = {0, 0, 0, 2, 0, 0, 0, 0, 1},
+	/* Left SFP cage (physical port 5) = SDS1 */
+	.sfp_port[0].pin_detect = GPIO30_ACL_BIT3_EN,
+	.sfp_port[0].pin_los = GPIO37,
+	.sfp_port[0].pin_tx_disable = GPIO_NA,
+	.sfp_port[0].sds = 1,
+	.sfp_port[0].i2c = I2CBUS( GPIO39_I2C_SDA4, GPIO40_I2C_SCL3_MDC1 ),
+	/* Right SFP cage (physical port 6) = SDS0 */
+	.sfp_port[1].pin_detect = GPIO50_I2C_SCL2_UART1_TX,
+	.sfp_port[1].pin_los = GPIO10_LED10,
+	.sfp_port[1].pin_tx_disable = GPIO_NA,
+	.sfp_port[1].sds = 0,
+	.sfp_port[1].i2c = I2CBUS( GPIO41_I2C_SDA3_MDIO1, GPIO40_I2C_SCL3_MDC1 ),
+	/* This board has no reset button, so reset_pin stays GPIO_NA (the
+	 * GW-9000 GPIO54 pin reads as permanently pressed here). */
+	.reset_pin = GPIO_NA,
+	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
+	.port_led_set = { 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	/* LED behaviour, per the case silkscreen:
+	 *   copper white = 2.5G solid, off at 100M/1000M
+	 *   copper blue  = solid when linked, blinks on activity (L/A)
+	 *   SFP single   = solid when linked, blinks on activity (L/A)
+	 *
+	 * Measured LED-ID mapping: LED-ID0 is the blue LED and LED-ID1 the
+	 * white one (setting LED-ID0 to 0 killed blue while leaving white on
+	 * at 2.5G only). LED-ID2 carries the SFP single LED.
+	 *
+	 * The led_sets below are the GW-9000 values (the baseline that already
+	 * looked correct). Experiments showed that on this board the RTL837x
+	 * "solid" conditions (LINK/speed) barely drive the LEDs on their own
+	 * and that ACT is what actually lights them, effectively at port
+	 * level. That is why the white LED used to glow faintly at non-2.5G
+	 * speeds, and why removing all ACT left every LED dark. The actual fix
+	 * is LED_GLB_IO_EN bit 6, applied for this machine in machine_init.c. */
 	.led_sets = { { LEDS_2G5 | LEDS_1G | LEDS_100M | LEDS_10M | LEDS_LINK | LEDS_ACT | LEDS_10G,
 			LEDS_2G5 | LEDS_LINK | LEDS_10G,
 			LEDS_1G | LEDS_LINK,

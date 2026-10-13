@@ -4,6 +4,15 @@
 
 ## Added
 
+- Devices
+  - Support the hongyavision HYWS-SGT0204S (PCB marking `2G5F4_10G2_V1.01`), an
+    RTL8372 based 4x2.5G + 2xSFP+ unmanaged switch with a 512 KB Bright Moon
+    `T25S40` flash. The two SFP+ cages are wired the opposite way round compared
+    to the GW-9000-6XH-X2 V1.1 (physical 5 is on SDS1, physical 6 on SDS0), the
+    serial header silkscreen labels are wrong, and `LED_GLB_IO_EN` bit 6 has to
+    be set for the port LEDs to work. New machine target
+    `MACHINE_2G5F4_10G2_V1_01`, see `doc/devices/2G5F4_10G2_V1.01.md`.
+
 - Web UI
   - Compress the embedded assets (minify + gzip) and switch to a single-page layout. #315
   - Replace the multi-page UI with a themed single-page app: light, dark and Selenized themes following the browser by default,
@@ -37,10 +46,15 @@
     instead of the whole management plane.
 
 - System
-  - `strcpy()` was declared but never implemented, so calls bound to SDCC's library
-    version, whose pointer width does not match the declaration. The only caller is
+  - `strcpy()` was declared in `rtl837x_common.h` but no longer implemented since
+    `494320b`, so calls bound to SDCC's library version, which takes the destination
+    as a generic pointer while the declaration promises `__xdata`. The only caller is
     the default-hostname path, so a switch without a `hostname` line in its config
-    came up with an empty hostname. The firmware now ships its own `strcpy()`.
+    came up with an empty hostname. Upstream fixed this independently in `c773230`
+    ("Bring back the definition of strcpy"); this branch had its own implementation
+    (`5ae99d8`) and now uses the upstream one, keeping only the comment that explains
+    the ABI mismatch. Merging `logicog:main` had left both definitions in
+    `rtlplayground.c`, which made the build fail with `error 65`.
 
 ## Breaking changes
 

@@ -439,6 +439,11 @@ uint16_t strlen_x(__xdata const char *s)
 }
 
 
+/* The firmware declares strcpy() but never shipped one, so calls bound to
+ * SDCC's library implementation, which takes a generic pointer where this
+ * declaration promises __xdata. That ABI mismatch is upstream #526 and it is
+ * how set_hostname_default() came to leave the hostname empty. Copy here, as
+ * the neighbouring memcpy()/strlen()/strcmp() already do. */
 uint16_t strcpy(__xdata uint8_t *dst, const char *s)
 {
 	__xdata uint8_t *b = dst;
@@ -461,24 +466,6 @@ char strcmp(__xdata const uint8_t *a, __code const uint8_t *b)
 	else if (a[i] > b[i])
 		return 1;
 	return 0;
-}
-
-
-/* The firmware declares strcpy() but never shipped one, so calls bound to
- * SDCC's library implementation, which takes a generic pointer where this
- * declaration promises __xdata. That ABI mismatch is upstream #526 and it is
- * how set_hostname_default() came to leave the hostname empty. Copy here, as
- * the neighbouring memcpy()/strlen()/strcmp() already do. */
-uint16_t strcpy(__xdata uint8_t *dst, const char *s)
-{
-	uint16_t n = 0;
-
-	while (s[n]) {
-		dst[n] = (uint8_t)s[n];
-		n++;
-	}
-	dst[n] = NUL;
-	return n;
 }
 
 
@@ -1747,7 +1734,7 @@ void main(void)
 	// Flash controller should be initialized before any code in other banks is being fetched
 	// See this issue: https://github.com/logicog/RTLPlayground/issues/70
 	print_string("\nInitializing Flash controller\n");
-	flash_init(1);
+	flash_init(machine.flash_sio ? 0 : 1);
 
 	// Set default for SFP pins so we can start up a module already inserted
 	sfp_pins_last = 0x33; // signal LOS and no module inserted (for both slots, even if only 1 present)
