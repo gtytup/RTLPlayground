@@ -35,6 +35,13 @@ test menu:
   (includes `chip sel:8373/8372: 3, 8224: 4`)
 - Interrupts forwarding, so never run it on a live device
 
+**No UART pads are exposed on this board.** The sibling boards bring the three
+console through-holes out at the board edge; this one does not have them, so the
+stock console is not usable for bring-up. (The SoC pins would be GPIO31 = UART
+TX and GPIO32 = UART RX, `RTL8372` balls L20/L21 per `doc/gpio.md`, if soldering
+to the package is ever considered.) Everything after flashing is done over the
+RTLPlayground web UI instead, see *Console access* below.
+
 Dump (512 KB, full chip read):
 
 | Item | Value |
@@ -152,51 +159,85 @@ Implementation plan (to be executed once the two GPIOs are measured):
 MACHINE_IES_WZ0204_V1_1
 ```
 
+### Console access
+
+This board has no serial header, but it does not need one: RTLPlayground's web
+UI contains a full CLI console.
+
+1. Plug a PC into any RJ45 port and set the PC to `192.168.10.0/24`.
+2. Browse to `http://192.168.10.247` — the default address from `config.txt`,
+   which is baked into the image at `0x6f000`/`0x70000`.
+3. Log in. The default password is `1234`.
+4. The overview already shows what is needed for most of the checklist: the
+   Ports card gives link state and speed per logical port, and the SFP slots
+   show module presence, vendor and DDM values.
+5. For everything else, the System card has a **`CLI command...`** box with a
+   **Send** button. Whatever is typed there is run by the switch's CLI and the
+   output is echoed into the log pane underneath. Every "run *cmd*" below means
+   typing it into that box. This includes `gpio`, `sfp`, `leds`, `port <n> show`,
+   `stat`, `regget`.
+
+The same is available over HTTP for scripted runs:
+
+```sh
+SW=192.168.10.247
+curl -c cookies.txt http://$SW/login -d pwd=1234        # session cookie
+curl -b cookies.txt -X POST http://$SW/cmd --data 'gpio'
+curl -b cookies.txt http://$SW/status.json              # port + SFP status
+```
+
+Since the board has no serial console, the boot log itself (the `Detecting
+CPU:`, `Hardware:` and flash-identification lines) cannot be watched. The
+information that mattered in those lines is still reachable:
+
+| Boot-log line | Web-UI equivalent |
+|---------------|-------------------|
+| `Detecting CPU: RTL837x` | run `regget 0004` and decode, see step 4 below |
+| `Hardware: <machine name>` | `hw_ver` on the overview page — must read `IES-WZ0204-V1.1` |
+| flash identification | if the UI comes up at all and the CLI answers, `flash_sio = 1` is right; a wrong value garbles or kills the boot |
+| `Flash too small for updating` | expected, nothing to check: 512 KB cannot hold the upload image |
+
 ### Bring-up checklist
 
-Everything below is done over the RTLPlayground console at 115200 8N1.
-
-**1. Find the UART pads.** Do not trust the silkscreen; on the sibling board
-the three labels were shifted by one. Identify ground by continuity, then find
-the board's TX pin by testing which of the remaining two pads prints when wired
-to the adapter's RX. The pads are 3.3V TTL; never connect VCC.
-
-**2. Confirm the stock firmware** at 9600 8N1: expect `RTL8371B start` and the
-`RTL8371B:` prompt, `?` prints the test menu.
-
-**3. Back up the flash** with a SOIC-8 clip and a CH341A (or similar), reading
+**1. Back up the flash** with a SOIC-8 clip and a CH341A (or similar), reading
 1 MiB. Use `flashprog`/IMSProg/NeoProgrammer: mainline flashrom's Boya table
 does not contain `0x4013`, so plain `flashrom` will report an unknown chip.
 
-**4. Write the RTLPlayground image** (512 KB, exactly fills the flash), then
+**2. Write the RTLPlayground image** (512 KB, exactly fills the flash), then
 **remove the clip before applying power**. Leaving the clip attached while
 powering the board has been observed to hold CS/CLK and produce a completely
 dead board.
 
-**5. Record the boot log** at 115200 and check:
+**3. Get to the web UI** as described under *Console access* above and confirm
+`hw_ver` reads `IES-WZ0204-V1.1`.
 
-| Console line | What it settles |
-|--------------|-----------------|
-| `Detecting CPU: RTL837x` | exact SoC variant (8372 / 8372N / 8373 / 8373N) |
-| `Hardware: IES-WZ0204-V1.1` | the right machine target is running |
-| `Manufacturer ID` / `Memory Type` / `Capacity` | flash identification; expects `0x68 0x40 0x13` and `512 KB`. Garbled output here means `flash_sio = 1` was wrong |
-| `Flash too small for updating` | expected: 512 KB leaves no room for the Web update image |
+**4. SoC variant.** Run `regget 0004` (that is `RTL837X_REG_CHIP_ID`) and read
+the printed value the same way the firmware does:
 
-**6. Copper port order.** Plug a live link into one physical RJ45 at a time and
-watch the console (`<new link: …>` reports the logical port) or poll
-`port <n> show` for each logical port. Record physical→logical for all four.
+| Value | Meaning |
+|-------|---------|
+| `0x8372....` | RTL8372 |
+| `0x8373....` | RTL8373 |
+| `0x..70..` | the `N` variant |
 
-**7. SFP cages.** With the console running, insert a module into the left cage
-and issue `gpio`. The GPIO input bit that flips is that cage's `pin_detect`.
-Repeat for the right cage. Then run `sfp`: if a cage is reported under the
-wrong slot number, swap `sfp_port[0]`/`sfp_port[1]` (i.e. `log_to_phys_port`
-and `is_sfp`). Which SDS a cage is wired to cannot be measured with GPIO — it
-is determined by linking up: if the left cage never links while the right one
-does, swap the two `.sds` values. `sfp` printing a module's rate and encoding
+So `0x83727000` would be an RTL8372N. The machine target currently declares
+`isRTL8373 = 0`.
+
+**5. Copper port order.** Plug a live link into one physical RJ45 at a time and
+watch which logical port goes `up` on the Ports card (or poll `port <n> show`).
+Record physical→logical for all four.
+
+**6. SFP cages.** Insert a module into the left cage and run `gpio`. The GPIO
+input bit that flips is that cage's `pin_detect`. Repeat for the right cage.
+Then check the SFP slots in the UI: if a cage is reported under the wrong slot
+number, swap `sfp_port[0]`/`sfp_port[1]` (i.e. `log_to_phys_port` and
+`is_sfp`). Which SDS a cage is wired to cannot be measured with GPIO — it is
+determined by linking up: if the left cage never links while the right one
+does, swap the two `.sds` values. A slot showing a module's rate and encoding
 confirms the I²C bus assignment.
 
-**8. Mode switches.** With the console running, flip one switch at a time and
-issue `gpio`. The output is two lines:
+**7. Mode switches.** Flip one switch at a time and run `gpio`. The output is
+two lines:
 
 ```
 GPIO 0: <8 hex digits> <8 hex digits>
@@ -225,17 +266,17 @@ Record both pins and both positions. Two things to watch out for:
 Finally, confirm the ON/OFF semantics against the case silkscreen — the table
 above is inferred from a same-class product, not measured here.
 
-**9. LEDs.** With a link up, `leds` dumps `RTL837X_REG_LED_GLB_IO_EN`, the
+**8. LEDs.** With a link up, `leds` dumps `RTL837X_REG_LED_GLB_IO_EN`, the
 LED-set configuration and the LED pad configuration. Use that plus the observed
 colour to confirm the LED-ID → colour mapping (white/blue/SFP) and that
 `LED_GLB_IO_EN` bit 6 really has to be set here as it does on the sibling
 board. `machine_custom_init()` currently sets that bit for this machine.
 
-**10. Reset pin.** Check `gpio` at boot: if a GPIO reads permanently low, it is
+**9. Reset pin.** Check `gpio` at boot: if a GPIO reads permanently low, it is
 a candidate for a reset button footprint. `reset_pin` stays `GPIO_NA` until
 one is confirmed.
 
-**11. Fold the results back** into `machine.c`, update this document, drop the
+**10. Fold the results back** into `machine.c`, update this document, drop the
 "unverified" banner and only then add a row to `doc/supported_devices.md`.
 
 ### Building
