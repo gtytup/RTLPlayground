@@ -103,17 +103,20 @@ re-checking the datasheet revision.
 
 ### Mode switches (DIP)
 
-**Measured (preliminary, 2026-10-14).** One switch at a time was flipped while
-running `gpio`; each pin changed in both directions, with a clean 1:1
-correlation:
+**Measured.** One switch at a time was flipped while running `gpio`; each pin
+changed in both directions, with a clean 1:1 correlation:
 
-| Switch | GPIO | resting position | flipped |
-|--------|------|------------------|---------|
+| Switch | GPIO | up (as shipped / in use) | flipped down |
+|--------|------|--------------------------|--------------|
 | VLAN | **GPIO31** | 1 | 0 |
 | 10G | **GPIO15** | 1 | 0 |
 
-Assuming the resting position is OFF, both are active-low. Which position is
-ON still has to be confirmed against the case silkscreen.
+Both switches are active low: **down = feature on, up = feature off.**
+
+The case carries no ON/OFF marking. The mapping above is anchored by the fact
+that the unit shipped and ran with both switches **up** as a plain unmanaged
+switch (all six ports in one broadcast domain), which is the state that reads as
+`1` on both pins.
 
 Two open questions about driving these two pins, since both are pins that
 RTLPlayground itself drives rather than plain inputs:
