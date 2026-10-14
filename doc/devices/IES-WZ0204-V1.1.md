@@ -101,6 +101,72 @@ re-checking the datasheet revision.
 | LED-ID0 / LED-ID1 / LED-ID2 | blue / white / SFP |
 | reset_pin | `GPIO_NA` (no populated button seen) |
 
+### Measured register state
+
+Taken on the board over the web CLI, running `v0.1.0-682a494`
+(`Hardware: IES-WZ0204-V1.1`).
+
+| Command | Result | Reading |
+|---------|--------|---------|
+| `version` | `IES-WZ0204-V1.1` | the target boots; `flash_sio = 1` is the right setting |
+| `regget 0004` | `0x83720000` | **RTL8372, non-`N`** — same decoding the firmware uses: `sfr_data[1] == 0x72` → not 8373, `sfr_data[2] == 0x00` → not `N`. Matches `isRTL8373 = 0` |
+| `leds`, `LED_GLB_IO_EN` | `0x77ffff40` | bit 6 set, i.e. `machine_custom_init()` is applied. Pads 8–26 and 28–30 are enabled, 27 and 31 are not |
+| `leds`, `PIN_MUX_0` | `0x28000000` | bits 27 and 29, matching `.high_leds.mux = LED_27 \| LED_29` |
+| `regget 7f90` | `0x40000041` | **bit 0 = 1: the UART0 TX function is muxed onto GPIO31.** RTLPlayground sets this bit itself (`rtlplayground.c`, "Enable serial interface"), so GPIO31 is the live serial console pin |
+| `gpio` twice | GPIO34 and GPIO42 toggled | noise baseline: `MDC0` is polled by the PHY code and GPIO42 is an SPI pin. Any bit that differs between two back-to-back `gpio` calls is not a switch |
+
+### GPIO31 and the VLAN switch
+
+The VLAN switch sits on a pin the firmware drives: with the switch down, the UART0
+TX output is pulled to ground, and while the UART transmits, the input readback
+follows the transmitted data instead of the switch. So the pin cannot be sampled
+reliably at an arbitrary moment, and shorting a driven output is a hardware
+concern in itself.
+
+Options, none of them free:
+
+1. **Read GPIO31 anyway.** Sample it and require two reads to agree, so a UART
+   frame in flight is discarded. Keeps the serial console. Leaves the electrical
+   question open.
+2. **Clear `PIN_MUX_1` bit 0** so the pin is a plain GPIO, and give up the
+   serial console. The web CLI remains, but a broken network configuration then
+   leaves no way in at all.
+3. **Leave the VLAN switch unimplemented** and document it as such.
+
+This needs a decision before the VLAN half of the switch support can be built.
+The 10G switch is on GPIO15, which is not a pin the firmware drives, so it has
+no such conflict.
+
+### SFP LEDs: this board has two per cage
+
+The sibling `2G5F4_10G2_V1.01` has a single LED per SFP cage. This board has
+**two**, and only one of them (the activity one) is doing anything, so the LED
+configuration needs a second entry driven for the SFP ports.
+
+Ports 3–8 all use LED-set 0, whose four entries are currently:
+
+| LED-ID | condition | on the sibling |
+|--------|-----------|----------------|
+| 0 | 2G5 \| 1G \| 100M \| 10M \| LINK \| ACT \| 10G | copper blue |
+| 1 | 2G5 \| LINK \| 10G | copper white |
+| 2 | 1G \| LINK | the single SFP LED |
+| 3 | 0 (never lights) | — |
+
+So the second SFP LED is most likely LED-ID 3, which is programmed to never
+light. Which physical pad it uses, and whether it is wired to the same set, still
+has to be established by experiment — the LED registers can be poked live with
+`regset`, so no reflash is needed per attempt:
+
+```
+leds                            # note the SET 0 values first
+regset 6544 <LED3:16bits><LED2:16bits>   # RTL837X_REG_LED3_2_SET0
+```
+
+Candidate bits for the condition word are in `rtl837x_leds.h`: `LINK` is `0x40`,
+`ACT` is `0x100`, `10G` is `0x10000` (see the LED-ID table in `leds_sets[]`).
+Try `LINK` alone first: if the second SFP LED goes solid, that entry is the one
+that drives it. Reboot to get back to the compiled configuration.
+
 ### Mode switches (DIP)
 
 **Measured.** One switch at a time was flipped while running `gpio`; each pin
