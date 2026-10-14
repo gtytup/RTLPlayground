@@ -273,14 +273,27 @@ Most recent observation: between two `gpio` calls **only bit 15 changed** — no
 other bank-0 bit, only the usual GPIO34/GPIO42 noise in bank 1 — and the two
 values reproduce the earlier "down" and "up" states exactly.
 
-**Decisive test, do this one:** unplug every cable and remove every module, so no
-link and no traffic can move any LED. Then flip the switch up/down a few times,
-running `gpio` after each.
+**Decisive test.** There is no serial console on this board, so the web UI is
+the only way in and at least one cable has to stay plugged in. The trick is to
+remove the one thing that can move an LED, the SFP link, and to check whether
+the pin ever follows the cable instead of the switch.
 
-| Result | Conclusion |
-|--------|------------|
-| GPIO15 follows the switch | it is the switch; the LED-pad concern is void |
-| GPIO15 never moves | it is an LED pad, and the 10G switch is somewhere else — possibly a strap |
+1. Remove **both SFP modules**. With nothing in the cages the 10G switch has no
+   link to renegotiate, which removes the one mechanism by which it could move
+   an LED indirectly.
+2. Keep a single management cable plugged in and **note which port** it is in.
+   Any port will do.
+3. `gpio` twice, to get a stable baseline.
+4. Flip the 10G switch, `gpio` twice, flip it back, `gpio` twice.
+5. **Move the management cable to a different port and repeat.**
+
+Reading the two rounds:
+
+| GPIO15 behaviour | Conclusion |
+|------------------|------------|
+| follows the switch in **both** rounds, whatever port the cable is in | it is the switch |
+| follows the switch in one round only, and stops when the cable moves | it is that port's LED — an LED pad, not the switch |
+| never moves | it is an LED pad, and the 10G switch has to be found elsewhere; it may be a hardware strap, in which case the firmware has nothing to implement |
 
 **GPIO31 stands regardless.** It is the UART0 TX pin, and the switch is the only
 thing that can pull it low, so it is readable while the UART is idle.
