@@ -153,19 +153,50 @@ Ports 3–8 all use LED-set 0, whose four entries are currently:
 | 3 | 0 (never lights) | — |
 
 So the second SFP LED is most likely LED-ID 3, which is programmed to never
-light. Which physical pad it uses, and whether it is wired to the same set, still
-has to be established by experiment — the LED registers can be poked live with
-`regset`, so no reflash is needed per attempt:
+light.
 
-```
-leds                            # note the SET 0 values first
-regset 6544 <LED3:16bits><LED2:16bits>   # RTL837X_REG_LED3_2_SET0
-```
+That is not just a guess. At a linked SFP the other three entries are all true,
+so each of their pads must already be lit if any pad is wired to them:
 
-Candidate bits for the condition word are in `rtl837x_leds.h`: `LINK` is `0x40`,
-`ACT` is `0x100`, `10G` is `0x10000` (see the LED-ID table in `leds_sets[]`).
-Try `LINK` alone first: if the second SFP LED goes solid, that entry is the one
-that drives it. Reboot to get back to the compiled configuration.
+| LED-ID | at a linked SFP | pad would be |
+|--------|-----------------|--------------|
+| 0 | LINK \| ACT \| 10G | lit, blinking |
+| 1 | LINK \| 10G | lit, solid |
+| 2 | LINK (1G is false at 10G) | lit, solid |
+| 3 | 0 | **dark** |
+
+One LED blinks and the second is completely dark, which matches LED-ID 3 exactly.
+
+### LED configuration encoding
+
+Derived from `rtl837x_leds.c` (`leds_setup`) and `rtl837x_leds_dump.c`; useful for
+any further LED work on this board.
+
+Each LED-ID is a 20-bit value: a 16-bit condition word plus a 4-bit high-speed
+nibble in bits 16–19.
+
+| Register | Holds |
+|----------|-------|
+| `LED1_0_SETn` (`0x6548 - n*8`) | `[LED-ID1 high][LED-ID1 low][LED-ID0 high][LED-ID0 low]` |
+| `LED3_2_SETn` (`0x6544 - n*8`) | `[LED-ID3 high][LED-ID3 low][LED-ID2 high][LED-ID2 low]` |
+| `LED3_0_SET1` (`0x6528`) | nibbles for SET0/SET1, `[set1 LED2/3][set1 LED0/1][set0 LED2/3][set0 LED0/1]` |
+| `LED3_0_SET3` (`0x6524`) | same for SET2/SET3 |
+
+Within each nibble byte, the low nibble is the even LED-ID and the high nibble
+the odd one. Nibble bits: 0 = 10G, 1 = TWO_5G, 2 = 5G, 3 = TWO_2G5.
+
+Condition word bits, from `rtl837x_leds.h`: 0 2G5, 1 TWO_1G, 2 1G, 3 500M, 4 100M,
+5 10M, 6 LINK, 7 LINK_FLASH, 8 ACT, 9 RX, 10 TX, 11 COL, 12 DUPLEX, 13 TRAINING,
+14 MASTER.
+
+The `regset` command writes the value big-endian into `SFR_DATA_24..0`, so
+`regset 6544 00400044` puts `0x0040` into LED-ID3 and leaves LED-ID2 at `0x0044`
+(1G \| LINK).
+
+### Still to decide on the mode switches
+
+- **GPIO31 / UART**: options 1–3 above, unresolved.
+- **GPIO15**: whether the 10G switch is currently down (reads 0).
 
 ### Mode switches (DIP)
 
