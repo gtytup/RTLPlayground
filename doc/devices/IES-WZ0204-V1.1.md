@@ -198,34 +198,106 @@ The `regset` command writes the value big-endian into `SFR_DATA_24..0`, so
 - **GPIO31 / UART**: options 1–3 above, unresolved.
 - **GPIO15**: whether the 10G switch is currently down (reads 0).
 
+### LED pad map
+
+The 6-bit field in `LED_GLB_MUX_1..6` decodes as **`LED-ID = (port << 2) | index`**,
+with `port` the LED port number (3–8 for this family) and `index` 0–3. That fits
+the dump exactly and explains pads 0–7 reading `0x3f` (unassigned): LED ports 0–2
+do not exist on a 4+2 board.
+
+| LED port | pads (index) |
+|----------|--------------|
+| 3 | 8 (3), 9 (0), 10 (1), 11 (2) |
+| 4 | 12 (0), 13 (1), 14 (2) |
+| 5 | 15 (0), 16 (1), 17 (2) |
+| 6 | 18 (0), 19 (1), 20 (2) |
+| 7 | 21 (0), 22 (1), 23 (2) |
+| 8 | 24 (0), 25 (1), 26 (2), 27 (3) |
+
+Assuming the LED port number is the logical port number, LED port 3 is the right
+SFP cage (logical 3) and LED port 8 the left one (logical 8); LED ports 4–7 are
+the four copper ports.
+
+**Only one port pad is disabled in `LED_GLB_IO_EN`** (`0x77ffff40`):
+
+| Register bits | Pads |
+|---------------|------|
+| enabled | 6, 8–26, 28, 29, 30 → `0x77ffff40` |
+| **disabled** | 0–5, 7, **27**, 31 |
+
+Pad 27 is LED port 8, index 3 — the fourth slot of the left SFP cage. Every other
+port pad is enabled. That makes pad 27 the prime candidate for the second SFP LED
+that stays dark: it cannot light no matter what its LED-ID condition says.
+
+Live test, no reflash (`RTL837X_REG_LED_GLB_IO_EN` is `0x65DC`):
+
+```
+regset 65dc 7fffff40     # enable pad 27
+regset 6548 01400140     # SET0: LED-ID0 and LED-ID1 = LINK | ACT
+regset 6544 01400140     # SET0: LED-ID2 and LED-ID3 = LINK | ACT
+```
+
+With all four entries set to LINK \| ACT, every wired LED on a linked port must
+blink. If the second SFP LED comes alive, narrow down which index drives it:
+
+| Test | Commands |
+|------|----------|
+| index 0 only | `regset 6548 00000140` then `regset 6544 00000000` |
+| index 1 only | `regset 6548 01400000` then `regset 6544 00000000` |
+| index 2 only | `regset 6548 00000000` then `regset 6544 00000140` |
+| index 3 only | `regset 6548 00000000` then `regset 6544 01400000` |
+
+If it stays dark even with all four driven and pad 27 enabled, the second SFP LED
+is not driven by LED-set 0 at all and the search has to move elsewhere.
+
+Reboot to restore the compiled configuration.
+
 ### Mode switches (DIP)
 
-**Measured.** One switch at a time was flipped while running `gpio`; each pin
-changed in both directions, with a clean 1:1 correlation:
+**Measured, then corrected.** A first pass, flipping one switch at a time while
+running `gpio`, showed each pin changing in both directions:
 
-| Switch | GPIO | up (as shipped / in use) | flipped down |
-|--------|------|--------------------------|--------------|
+| Switch | GPIO | up | flipped down |
+|--------|------|----|--------------|
 | VLAN | **GPIO31** | 1 | 0 |
-| 10G | **GPIO15** | 1 | 0 |
+| 10G | ~~GPIO15~~ | 1 | 0 |
 
-Both switches are active low: **down = feature on, up = feature off.**
+**GPIO31 stands.** It is the UART0 TX pin, and the switch is the only thing that
+can pull it low, so it is stable when the UART is idle.
 
-The case carries no ON/OFF marking. The mapping above is anchored by the fact
-that the unit shipped and ran with both switches **up** as a plain unmanaged
-switch (all six ports in one broadcast domain), which is the state that reads as
-`1` on both pins.
+**GPIO15 does not.** A later reading taken with both switches confirmed up still
+showed GPIO15 = 0, which contradicts the first pass. GPIO15 is LED pad 15, an
+enabled LED output, so its readback follows whatever that LED is doing and is not
+a switch input. The original correlation was almost certainly the LED reacting to
+the SFP link renegotiating when the 10G switch was flipped.
 
-Two open questions about driving these two pins, since both are pins that
-RTLPlayground itself drives rather than plain inputs:
+The 10G switch therefore has to be found again, and it may not be a GPIO at all:
+if it is a hardware strap that only the ASIC samples at reset, the firmware has
+nothing to read and nothing to implement.
 
-- **GPIO31 is `UART0_TX`.** RTLPlayground runs the console on it, so a closed
-  switch shorts the SoC's UART output to ground and the input readback follows
-  console traffic. Check `regget 7f90` (`RTL837X_PIN_MUX_1`), bit 0: if it is
-  set, the UART function is muxed onto that pin.
-- **GPIO15 is `LED15`.** Check the `RTL837X_REG_LED_GLB_IO_EN` bit 15 and the
-  pad's LED-ID in the `leds` dump. If the pad is enabled and drives an LED,
-  the readback follows the LED, not the switch, and the pin is unusable as a
-  switch input while that LED is active.
+Decisive test — **both SFP cages empty, nothing plugged or unplugged**, so no LED
+can move:
+
+```
+gpio
+GPIO 0: fff76dff 00000000     # baseline, note the level and confirm
+GPIO 1: 0a3fdbbb 00000404     # only GPIO34/42 move: noise
+```
+
+Then flip the 10G switch and run `gpio` again. A bit that moves against the
+baseline is the switch; if nothing moves, it is a strap (or a pin that never
+reaches this register).
+
+One remaining question about reading the VLAN switch, since GPIO31 is a pin
+RTLPlayground itself drives:
+
+- **GPIO31 is `UART0_TX`.** RTLPlayground runs the console on it and enables the
+  UART mux itself (`PIN_MUX_1` bit 0 is set, confirmed with `regget 7f90`), so a
+  closed switch shorts the SoC's UART output to ground, and while the UART is
+  transmitting the input readback follows the transmitted data instead of the
+  switch.
+
+The GPIO15 uncertainty is resolved above: it is an LED pad, not the 10G switch.
 
 Neither pin collides with the SFP pins used by the target (GPIO30/37/50/10) or
 its I²C pins (GPIO39/40/41), so the SFP detection is unaffected either way.
