@@ -200,6 +200,51 @@ The `regset` command writes the value big-endian into `SFR_DATA_24..0`, so
 - **GPIO31 / UART**: options 1–3 above, unresolved.
 - **GPIO15**: whether the 10G switch is currently down (reads 0).
 
+### The second SFP LED is probably a module-present indicator
+
+The case has an arrow next to it pointing at the optical port. That reads as a
+per-cage indicator, and a `MOD-DEF0` / module-present LED is the usual meaning:
+the module pulls `MOD-DEF0` low when inserted, and an LED hung on that net lights
+with no firmware involvement at all.
+
+This matters because of what the firmware does with SFP GPIOs: RTLPlayground
+drives **one** SFP GPIO as an output, `pin_tx_disable` (`sfp.c`, in
+`setup_sfp_gpio()`), and on this target both cages have it set to `GPIO_NA`, so
+nothing is driven. There is no firmware feature for a module-present LED.
+
+So there are only two possibilities, and they are easy to tell apart:
+
+| Cause | Behaviour |
+|-------|-----------|
+| hardware, hung on the module-present net | lights whenever a module is inserted, in either cage, under any firmware |
+| a GPIO the stock firmware drives | dark under RTLPlayground by construction — nothing implements it |
+
+**Test:** insert a module into **both** cages and look at both second LEDs.
+
+- Both light → hardware, nothing to implement.
+- One or both stay dark → either the stock firmware drove it, or it means
+  something else (for example a 10G-speed indicator, which would stay dark with
+a 1G/2.5G module).
+
+The answer to "did this LED ever light under the stock firmware" settles it
+too, and is worth asking before chasing the pin.
+
+If it does turn out to be firmware-driven, there is a ready hook: `pin_tx_disable`
+is already set up as an output during `setup_sfp_gpio()`, and `gpio_output_setup()`
+can be reused for a second, dedicated pin. No new plumbing is needed.
+
+### SFP detection is still unverified
+
+Related, and more important than the LED: this target's `pin_detect` (GPIO30 for
+the left cage, GPIO50 for the right) and the two I²C buses were inherited from
+the sibling board and have **never been verified here**. If a detect pin is
+wrong, module recognition silently fails, which would also explain any
+recognition-dependent indicator staying dark.
+
+Verify with `gpio` while inserting a module: the bit that flips is that cage's
+detect pin. And run `sfp`, which reads the module EEPROM — if it prints a vendor
+and model, the detect pin and the I²C bus are both right.
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
