@@ -22,7 +22,17 @@
 // but fitted with a 4 MB Winbond W25Q32JV whose reads are not reliable in DIO
 // mode. This target reads the flash in single-IO mode, see flash_sio in
 // machine.h and doc/devices/KP-9000-6XH-X2.md.
-#define MACHINE_GW_9000_6XH_X2_V1_1
+// #define MACHINE_GW_9000_6XH_X2_V1_1
+
+// IES-WZ0204-V1.1: industrial 4x2.5G + 2xSFP+ board from the same RTL8371B
+// family. The PCB and the part selection differ from the 2G5F4_10G2_V1.01
+// below, so the port/SFP/LED mapping has to be measured, see
+// doc/devices/IES-WZ0204-V1.1.md.
+// NOTE: exactly one MACHINE_ define may be active. The branches in machine.c are
+// evaluated in order and the first match wins, so leaving e.g.
+// MACHINE_GW_9000_6XH_X2_V1_1 active would silently override
+// `make MACHINE=<other>`.
+#define MACHINE_IES_WZ0204_V1_1
 
 // 2G5F4_10G2_V1.01 (HYWS-SGT0204S): RTL8372, 4x2.5G + 2xSFP+, same layout as
 // the GW-9000-6XH-X2 V1.1 but the two SFP+ cages (physical ports 5/6) are
