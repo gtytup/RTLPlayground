@@ -254,39 +254,36 @@ Reboot to restore the compiled configuration.
 
 ### Mode switches (DIP)
 
-**Measured, then corrected.** A first pass, flipping one switch at a time while
-running `gpio`, showed each pin changing in both directions:
+**Under test — evidence points both ways.** Timeline:
 
-| Switch | GPIO | up | flipped down |
-|--------|------|----|--------------|
-| VLAN | **GPIO31** | 1 | 0 |
-| 10G | ~~GPIO15~~ | 1 | 0 |
+| Observation | GPIO15 | Read as |
+|-------------|--------|---------|
+| both switches up (first pass) | 1 | switch tracks |
+| VLAN flipped | 1 | unaffected |
+| 10G flipped | 0 | switch tracks |
+| both restored | 1 | switch tracks |
+| a later session, switches reported up | 0 | **contradiction** |
+| switch flipped again, nothing else touched | 0 → 1 | switch tracks |
 
-**GPIO31 stands.** It is the UART0 TX pin, and the switch is the only thing that
-can pull it low, so it is stable when the UART is idle.
+GPIO15 is an enabled LED pad (`GLB_IO_EN` bit 15, pad 15 = LED port 5 index 0),
+which is the only reason the pin could move on its own: flipping the 10G switch
+renegotiates the SFP links, which moves the LED, which moves the readback.
 
-**GPIO15 does not.** A later reading taken with both switches confirmed up still
-showed GPIO15 = 0, which contradicts the first pass. GPIO15 is LED pad 15, an
-enabled LED output, so its readback follows whatever that LED is doing and is not
-a switch input. The original correlation was almost certainly the LED reacting to
-the SFP link renegotiating when the 10G switch was flipped.
+Most recent observation: between two `gpio` calls **only bit 15 changed** — no
+other bank-0 bit, only the usual GPIO34/GPIO42 noise in bank 1 — and the two
+values reproduce the earlier "down" and "up" states exactly.
 
-The 10G switch therefore has to be found again, and it may not be a GPIO at all:
-if it is a hardware strap that only the ASIC samples at reset, the firmware has
-nothing to read and nothing to implement.
+**Decisive test, do this one:** unplug every cable and remove every module, so no
+link and no traffic can move any LED. Then flip the switch up/down a few times,
+running `gpio` after each.
 
-Decisive test — **both SFP cages empty, nothing plugged or unplugged**, so no LED
-can move:
+| Result | Conclusion |
+|--------|------------|
+| GPIO15 follows the switch | it is the switch; the LED-pad concern is void |
+| GPIO15 never moves | it is an LED pad, and the 10G switch is somewhere else — possibly a strap |
 
-```
-gpio
-GPIO 0: fff76dff 00000000     # baseline, note the level and confirm
-GPIO 1: 0a3fdbbb 00000404     # only GPIO34/42 move: noise
-```
-
-Then flip the 10G switch and run `gpio` again. A bit that moves against the
-baseline is the switch; if nothing moves, it is a strap (or a pin that never
-reaches this register).
+**GPIO31 stands regardless.** It is the UART0 TX pin, and the switch is the only
+thing that can pull it low, so it is readable while the UART is idle.
 
 One remaining question about reading the VLAN switch, since GPIO31 is a pin
 RTLPlayground itself drives:
