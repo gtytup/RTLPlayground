@@ -114,8 +114,10 @@ __code const struct machine machine = {
 	.sfp_port[1].pin_tx_disable = GPIO_NA,
 	.sfp_port[1].sds = 0,
 	.sfp_port[1].i2c = I2CBUS( GPIO41_I2C_SDA3_MDIO1, GPIO40_I2C_SCL3_MDC1 ),
-	/* This board has no reset button, so reset_pin stays GPIO_NA (the
-	 * GW-9000 GPIO54 pin reads as permanently pressed here). */
+	/* The board has a 3-hole reset button footprint, but it is unpopulated and
+	 * the case has no opening for it, so reset_pin stays GPIO_NA. The GW-9000
+	 * GPIO54 pin reads as permanently pressed here, which may or may not be
+	 * this footprint. */
 	.reset_pin = GPIO_NA,
 	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
 	.port_led_set = { 0, 0, 0, 0, 0, 0, 0, 0, 0},
