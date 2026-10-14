@@ -200,6 +200,49 @@ The `regset` command writes the value big-endian into `SFR_DATA_24..0`, so
 - **GPIO31 / UART**: options 1–3 above, unresolved.
 - **GPIO15**: whether the 10G switch is currently down (reads 0).
 
+### SFP LEDs: the second one is still not found
+
+With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
+wired LED on a linked port must blink. The second SFP LED stayed dark, so it is
+**not driven by LED-set 0** — at least not through the pads assumed so far.
+
+What that rules out:
+
+| Ruled out | Why |
+|-----------|-----|
+| the condition being 0 (LED-ID 3) | all four entries were driven |
+| pad 27 being disabled in `LED_GLB_IO_EN` | it was enabled first |
+| the activity condition not firing | `LINK` was included, so a linked port lights regardless |
+
+What is left, in order of likelihood:
+
+1. **It is a 10G indicator, not a link indicator.** If the fitted module is 1G or
+   2.5G, a 10G-only LED never lights. Ask what module is inserted and whether
+   this LED ever lit under the stock firmware — that single answer may close it.
+   A related variant: it is lit by the 10G switch, which would only take effect
+   after a power cycle if the switch is a reset-time strap.
+2. **Its pad is not in the port group assumed.** The LED port numbering was
+derived, not measured. Identify the pads empirically instead: the LED pads are
+readable through `gpio`, so sampling `gpio` repeatedly while an LED blinks shows
+which bits belong to which LED. A burst of ~8 `gpio` calls with nothing touched
+reveals the blinking pads directly.
+3. **It is not an LED-controller output at all** — a plain GPIO the stock
+firmware toggles, or a hardware line.
+
+A brute-force check that separates 1/2 from 3: enable every pad and try again.
+
+```
+regset 65dc ffffffff    # GLB_IO_EN, all 32 pads
+```
+
+If that lights it, the pad was simply not enabled and the bit can be bisected.
+If it stays dark, the LED is not on this controller's port groups.
+Reboot restores everything.
+
+Also worth re-reading `leds` after the `regset` runs, to confirm the writes
+actually landed: `LED_GLB_IO_EN` should read `0x7fffff40` and SET 0 should read
+`01400140` for both LED-ID0/1 and LED-ID2/3.
+
 ### LED pad map
 
 The 6-bit field in `LED_GLB_MUX_1..6` decodes as **`LED-ID = (port << 2) | index`**,
