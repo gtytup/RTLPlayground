@@ -123,19 +123,21 @@ follows the transmitted data instead of the switch. So the pin cannot be sampled
 reliably at an arbitrary moment, and shorting a driven output is a hardware
 concern in itself.
 
-Options, none of them free:
+Options, none of them free — except that the board has **no serial console exposed
+at all** (no through-holes; the only way in is the web UI), which changes the
+trade-off:
 
-1. **Read GPIO31 anyway.** Sample it and require two reads to agree, so a UART
-   frame in flight is discarded. Keeps the serial console. Leaves the electrical
-   question open.
-2. **Clear `PIN_MUX_1` bit 0** so the pin is a plain GPIO, and give up the
-   serial console. The web CLI remains, but a broken network configuration then
-   leaves no way in at all.
-3. **Leave the VLAN switch unimplemented** and document it as such.
+1. **Read GPIO31 anyway**, requiring two reads to agree so a UART frame in
+   flight is discarded. Keeps the UART alive for anyone who later solders to the
+   package. Leaves the electrical question open: with the switch closed, every
+   transmitted byte is shorted to ground.
+2. **Clear `PIN_MUX_1` bit 0** so the pin is a plain GPIO and the UART no longer
+   drives it. Because the serial console is unreachable on this board anyway,
+   this costs nothing in practice — the web UI is unaffected — and it removes
+   both the readback conflict and the shorting concern. **Preferred.**
+3. Leave the VLAN switch unimplemented and document it as such.
 
-This needs a decision before the VLAN half of the switch support can be built.
-The 10G switch is on GPIO15, which is not a pin the firmware drives, so it has
-no such conflict.
+The 10G switch needs no such decision, see above: no GPIO tracked it.
 
 ### SFP LEDs: this board has two per cage
 
@@ -254,49 +256,38 @@ Reboot to restore the compiled configuration.
 
 ### Mode switches (DIP)
 
-**Under test — evidence points both ways.** Timeline:
+**Settled: GPIO15 is a port LED pad, not the 10G switch.**
 
-| Observation | GPIO15 | Read as |
-|-------------|--------|---------|
-| both switches up (first pass) | 1 | switch tracks |
-| VLAN flipped | 1 | unaffected |
-| 10G flipped | 0 | switch tracks |
-| both restored | 1 | switch tracks |
-| a later session, switches reported up | 0 | **contradiction** |
-| switch flipped again, nothing else touched | 0 → 1 | switch tracks |
+GPIO15 is LED pad 15 = LED port 5 index 0, i.e. one of the two LEDs of a copper
+port. The reading that settles it is the cable move: with the management cable on
+`port2` the LED ports involved are 5 and 6, and moving the cable to `port3`
+changed exactly four bits:
 
-GPIO15 is an enabled LED pad (`GLB_IO_EN` bit 15, pad 15 = LED port 5 index 0),
-which is the only reason the pin could move on its own: flipping the 10G switch
-renegotiates the SFP links, which moves the LED, which moves the readback.
+| Bit | Pad | Belongs to |
+|-----|-----|------------|
+| 15 | LED port 5 idx 0 | copper port, first LED |
+| 16 | LED port 5 idx 1 | copper port, second LED |
+| 18 | LED port 6 idx 0 | the other copper port, first LED |
+| 19 | LED port 6 idx 1 | the other copper port, second LED |
 
-Most recent observation: between two `gpio` calls **only bit 15 changed** — no
-other bank-0 bit, only the usual GPIO34/GPIO42 noise in bank 1 — and the two
-values reproduce the earlier "down" and "up" states exactly.
+Four pads = two ports × two LEDs, and only those four moved. That is the cable
+moving from one port to the other, with no coincidence left over. In the same
+round GPIO15 and GPIO16 sat at opposite levels, which is what two LEDs of one
+port do, and GPIO15 toggled while the cable was on its port — the activity LED
+blinking with the CLI traffic it was itself carrying.
 
-**Decisive test.** There is no serial console on this board, so the web UI is
-the only way in and at least one cable has to stay plugged in. The trick is to
-remove the one thing that can move an LED, the SFP link, and to check whether
-the pin ever follows the cable instead of the switch.
+So GPIO15 cannot be used as a switch input, and the earlier 1:1 correlation with
+the 10G switch was an artifact.
 
-1. Remove **both SFP modules**. With nothing in the cages the 10G switch has no
-   link to renegotiate, which removes the one mechanism by which it could move
-   an LED indirectly.
-2. Keep a single management cable plugged in and **note which port** it is in.
-   Any port will do.
-3. `gpio` twice, to get a stable baseline.
-4. Flip the 10G switch, `gpio` twice, flip it back, `gpio` twice.
-5. **Move the management cable to a different port and repeat.**
+**Consequence: the 10G switch may not be readable at all.** In neither round did
+any pin track the switch flips. If it is a hardware strap that only the ASIC
+samples at reset, there is nothing for the firmware to read and nothing to
+implement — RTLPlayground would already honour it. A functional check: insert a
+1G module and flip the switch; if the link drops when the switch is engaged, the
+strap is live and no firmware work is needed.
 
-Reading the two rounds:
-
-| GPIO15 behaviour | Conclusion |
-|------------------|------------|
-| follows the switch in **both** rounds, whatever port the cable is in | it is the switch |
-| follows the switch in one round only, and stops when the cable moves | it is that port's LED — an LED pad, not the switch |
-| never moves | it is an LED pad, and the 10G switch has to be found elsewhere; it may be a hardware strap, in which case the firmware has nothing to implement |
-
-**GPIO31 stands regardless.** It is the UART0 TX pin, and the switch is the only
-thing that can pull it low, so it is readable while the UART is idle.
+**GPIO31 stands as the VLAN switch.** It is the UART0 TX pin, and the switch is
+the only thing that can pull it low, so it is readable while the UART is idle.
 
 One remaining question about reading the VLAN switch, since GPIO31 is a pin
 RTLPlayground itself drives:
