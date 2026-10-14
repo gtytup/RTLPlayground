@@ -103,6 +103,39 @@ re-checking the datasheet revision.
 
 ### Mode switches (DIP)
 
+**Measured (preliminary, 2026-10-14).** One switch at a time was flipped while
+running `gpio`; each pin changed in both directions, with a clean 1:1
+correlation:
+
+| Switch | GPIO | resting position | flipped |
+|--------|------|------------------|---------|
+| VLAN | **GPIO31** | 1 | 0 |
+| 10G | **GPIO15** | 1 | 0 |
+
+Assuming the resting position is OFF, both are active-low. Which position is
+ON still has to be confirmed against the case silkscreen.
+
+Two open questions about driving these two pins, since both are pins that
+RTLPlayground itself drives rather than plain inputs:
+
+- **GPIO31 is `UART0_TX`.** RTLPlayground runs the console on it, so a closed
+  switch shorts the SoC's UART output to ground and the input readback follows
+  console traffic. Check `regget 7f90` (`RTL837X_PIN_MUX_1`), bit 0: if it is
+  set, the UART function is muxed onto that pin.
+- **GPIO15 is `LED15`.** Check the `RTL837X_REG_LED_GLB_IO_EN` bit 15 and the
+  pad's LED-ID in the `leds` dump. If the pad is enabled and drives an LED,
+  the readback follows the LED, not the switch, and the pin is unusable as a
+  switch input while that LED is active.
+
+Neither pin collides with the SFP pins used by the target (GPIO30/37/50/10) or
+its I²C pins (GPIO39/40/41), so the SFP detection is unaffected either way.
+
+One caution on the method: a fourth reading taken while resetting both switches
+additionally showed GPIO32, GPIO34 and GPIO42 moving (UART0 RX floating, MDC0
+polled by the PHY code, GPIO42 a SPI pin). Always take **two `gpio` readings
+back to back with the switches untouched** and ignore any bit that differs
+between those two — those are floating or polled pins, not switches.
+
 The case has **two slide switches: one labelled VLAN, one labelled 10G.**
 RTLPlayground does not read them today, so with the regenerated firmware they
 would be dead controls — the stock firmware presumably honours them.
