@@ -90,16 +90,16 @@ re-checking the datasheet revision.
 
 ### Port layout, serial console, LEDs, SFP GPIOs
 
-**All unverified.** The machine target currently inherits the
-`2G5F4_10G2_V1.01` values:
+**Mostly unverified.** The machine target inherits the `2G5F4_10G2_V1.01`
+values. What has been checked since is marked:
 
-| Item | Hypothesis (from 2G5F4_10G2_V1.01) |
-|------|--------------------------------------|
-| Copper physical 1–4 | logical 4, 5, 6, 7 |
-| Left SFP cage (physical 5) | logical 8, SDS1, detect GPIO30, LOS GPIO37, I2C SDA4/SCL3 |
-| Right SFP cage (physical 6) | logical 3, SDS0, detect GPIO50, LOS GPIO10, I2C SDA3/SCL3 |
-| LED-ID0 / LED-ID1 / LED-ID2 | blue / white / SFP |
-| reset_pin | `GPIO_NA` (no populated button seen) |
+| Item | Hypothesis / measured |
+|------|------------------------|
+| Copper physical 1–4 | logical 4, 5, 6, 7 — **panel 2 and 3 confirmed** (from the LED pads that move with the cable) |
+| Left SFP cage (physical 5) | logical 8, SDS1, detect GPIO30, LOS GPIO37, I2C SDA4/SCL3 — **detect and I2C confirmed** by reading a Finisar module in slot 1; LOS and SDS still open |
+| Right SFP cage (physical 6) | logical 3, SDS0, detect GPIO50, LOS GPIO10, I2C SDA3/SCL3 — **entirely unverified**, no module has been in that cage |
+| LED-ID0 / LED-ID1 / LED-ID2 | see the measured pad map below |
+| reset_pin | `GPIO_NA`; GPIO54 reads 0 permanently, as on the sibling board |
 
 ### Measured register state
 
@@ -534,35 +534,42 @@ Reboot to restore the compiled configuration.
 
 ### Mode switches (DIP)
 
-**Settled: GPIO15 is a port LED pad, not the 10G switch.**
+**Settled: GPIO15 is a port LED pad, and the 10G switch is not a readable GPIO.**
 
 GPIO15 is LED pad 15 = LED port 5 index 0, i.e. one of the two LEDs of a copper
-port. The reading that settles it is the cable move: with the management cable on
-`port2` the LED ports involved are 5 and 6, and moving the cable to `port3`
-changed exactly four bits:
+port. The round with the management cable on `port2` and the one with it on
+`port3` settle it, and the second round is the decisive one:
+
+| Round | Cable on | Bank 0 across six `gpio` calls |
+|-------|----------|--------------------------------|
+| 1 | `port2` | GPIO15 alternated `1,0,1,0,1`, GPIO16 steady |
+| 2 | `port3` | **byte-identical all six times** |
+
+The 10G switch was flipped four times in each round. In round 2 **nothing in
+bank 0 moved at all**, so no GPIO tracks the switch. In round 1 GPIO15 alternated
+perfectly — but that is not the switch either, it is **aliasing**: pad 15 is the
+activity LED of the port the management cable was plugged into, carrying the CLI
+traffic of the very commands being typed, and a periodic blink sampled at a
+nearly constant interval produces exactly that regular `1,0,1,0,1`.
+
+The cable move confirms the pad identities:
 
 | Bit | Pad | Belongs to |
 |-----|-----|------------|
-| 15 | LED port 5 idx 0 | copper port, first LED |
-| 16 | LED port 5 idx 1 | copper port, second LED |
-| 18 | LED port 6 idx 0 | the other copper port, first LED |
-| 19 | LED port 6 idx 1 | the other copper port, second LED |
+| 15 | LED port 5 idx 0 | `port2`, first LED |
+| 16 | LED port 5 idx 1 | `port2`, second LED |
+| 18 | LED port 6 idx 0 | `port3`, first LED |
+| 19 | LED port 6 idx 1 | `port3`, second LED |
 
-Four pads = two ports × two LEDs, and only those four moved. That is the cable
-moving from one port to the other, with no coincidence left over. In the same
-round GPIO15 and GPIO16 sat at opposite levels, which is what two LEDs of one
-port do, and GPIO15 toggled while the cable was on its port — the activity LED
-blinking with the CLI traffic it was itself carrying.
+Moving the cable from `port2` to `port3` changed exactly those four bits and
+nothing else — two ports × two LEDs. **As a bonus this verifies part of the port
+order**: panel `port2` is logical 5 and panel `port3` is logical 6, which is what
+the inherited `log_to_phys_port` predicts for physical ports 2 and 3.
 
-So GPIO15 cannot be used as a switch input, and the earlier 1:1 correlation with
-the 10G switch was an artifact.
-
-**Consequence: the 10G switch may not be readable at all.** In neither round did
-any pin track the switch flips. If it is a hardware strap that only the ASIC
-samples at reset, there is nothing for the firmware to read and nothing to
-implement — RTLPlayground would already honour it. A functional check: insert a
-1G module and flip the switch; if the link drops when the switch is engaged, the
-strap is live and no firmware work is needed.
+**Consequence: the 10G switch is a hardware strap and needs no firmware work.**
+No pin tracked it, so the ASIC must sample it itself — RTLPlayground honours it
+already. A functional check if wanted: insert a 1G module and flip the switch; if
+the link drops when the switch is engaged, the strap is live.
 
 **GPIO31 stands as the VLAN switch.** It is the UART0 TX pin, and the switch is
 the only thing that can pull it low, so it is readable while the UART is idle.
