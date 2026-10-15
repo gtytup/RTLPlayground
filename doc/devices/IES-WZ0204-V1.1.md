@@ -133,7 +133,10 @@ switch would otherwise pull the UART output to ground on every byte transmitted.
 The switch is read **once, after `execute_config()`**, not in
 `machine_custom_init()`: `port_l2_setup()` writes the isolation masks first and
 the configuration replay overwrites them, so the switch has to be the last writer.
-Each group gets its own ports plus the CPU port, so management stays reachable.
+A copper port's mask holds itself and the SFP+
+cages; a cage's mask holds every port. Both directions have to be allowed or the
+path through a cage breaks. The CPU port stays in every mask, so management
+remains reachable.
 Behaviour is one-directional — flipping the switch on always has a visible effect,
 and a saved configuration is never permanently shadowed by a switch position.
 `main()` prints one line, `Mode switch: VLAN=on|off`, so it is visible what was
@@ -605,15 +608,20 @@ The case has **two slide switches: one labelled VLAN, one labelled 10G.**
 RTLPlayground does not read them today, so with the regenerated firmware they
 would be dead controls — the stock firmware presumably honours them.
 
-Inferred behaviour, from a same-class 4×2.5G + 2×SFP+ industrial switch (not
-verified on this board — confirm against the case silkscreen):
+Behaviour confirmed by the board's owner:
 
 | Switch | Position | Effect |
 |--------|----------|--------|
-| VLAN | ON | port isolation: RJ45 1–4 form one group and the two SFP+ another, no cross-group forwarding |
+| VLAN | ON | the copper ports are isolated **from each other**; each of them can still reach the SFP+ cages |
 | VLAN | OFF | all six ports in one broadcast domain (plain unmanaged switch) |
-| 10G | ON | the SFP+ SerDes are forced to 10G |
-| 10G | OFF | 1.25G / 10G adaptive, per the module's EEPROM rate |
+| 10G | — | hardware strap, not a readable GPIO; no firmware involvement |
+
+Note the direction of the VLAN isolation, because it is easy to get backwards: it
+is *copper against copper*, with the cages as the shared uplink — **not** copper
+against cages. A same-class product page found while researching says the
+opposite ("1-4 work together, FX1-FX2 work together"); that source does not match
+this board, and a first implementation built on it grouped the ports the wrong way
+round.
 
 Two reasons this matters beyond feature parity:
 
