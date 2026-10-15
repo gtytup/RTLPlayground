@@ -18,6 +18,14 @@
 // #define MACHINE_KP_9000_6XH_X2_V2_1
 // #define MACHINE_KP_9000_6XHML_X2_V2_1
 
+// IES-WZ0204-V1.1: industrial 4x2.5G + 2xSFP+ board from the same RTL8371B
+// family. Its flash cannot be read in DIO mode and its cage LEDs and VLAN mode
+// switch need board-specific settings, see doc/devices/IES-WZ0204-V1.1.md.
+// NOTE: exactly one MACHINE_ define may be active. The branches in machine.c are
+// evaluated in order and the first match wins, so leaving another one active
+// would silently override `make MACHINE=<other>`.
+#define MACHINE_IES_WZ0204_V1_1
+
 // #define MACHINE_KP_9000_6XH_X
 // #define MACHINE_KP_9000_9XH_X_EU
 // #define MACHINE_KP_9000_9XHML_X_V2_2

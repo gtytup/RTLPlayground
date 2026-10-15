@@ -19,6 +19,7 @@
 	defined(MACHINE_HI_K0402WS) || \
 	defined(MACHINE_PCB_K0402WS_V2) || \
 	defined(MACHINE_PCB_K0402WS_V3) || \
+	defined(MACHINE_IES_WZ0204_V1_1) || \
 	defined(MACHINE_FNS1200P)
 void machine_custom_init(void) __banked
 {

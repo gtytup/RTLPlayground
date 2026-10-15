@@ -4,6 +4,16 @@
 
 ## Added
 
+- Devices
+  - Support the IES-WZ0204-V1.1, an RTL8372 based industrial 4x2.5G + 2xSFP+
+    board whose Boya `BY25D40` flash cannot be read in DIO mode, so it needs
+    single-IO flash reads. Both cage LEDs sit on an LED entry whose speed bits do
+    not include 10G and stayed dark; the LED mux and LED-set are corrected for
+    it. Its VLAN slide switch sits on the UART0 TX pin and isolates the copper
+    ports from each other while leaving the cages as a shared uplink. New
+    machine target `MACHINE_IES_WZ0204_V1_1`, see
+    `doc/devices/IES-WZ0204-V1.1.md`.
+
 - Web UI
   - Compress the embedded assets (minify + gzip) and switch to a single-page layout. #315
   - Replace the multi-page UI with a themed single-page app: light, dark and Selenized themes following the browser by default,

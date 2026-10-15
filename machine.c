@@ -1464,6 +1464,78 @@ __code const struct machine machine = {
 	},
 };
 
+#elif defined MACHINE_IES_WZ0204_V1_1
+/* IES-WZ0204-V1.1, industrial 4x2.5G + 2xSFP+ board (RTL8371B family).
+ *
+ * FIRST-PASS TARGET: everything below is inherited from
+ * MACHINE_2G5F4_10G2_V1_01, which is the same class of board and is verified
+ * working. The PCB is known to be different, so these items are explicitly
+ * NOT verified on this board yet and have to be measured with the `gpio` and
+ * `leds` console commands:
+ *
+ *   - copper physical port order (physical 1-4)
+ *   - which SFP cage is on SDS0 and which on SDS1
+ *   - SFP pin_detect / pin_los GPIOs
+ *   - LED-ID to LED-colour mapping
+ *   - reset_pin (GPIO_NA assumed, no populated button seen yet)
+ *
+ * flash_sio = 1 is not merely a fallback here: the fitted Boya BY25D40 (JEDEC
+ * 0x68 0x40 0x13) offers 0x03/0x0B/0x3B reads but no 0xBB dual-I/O read, so
+ * the SoC cannot fetch code in DIO mode at all. */
+__code const struct machine machine = {
+	.machine_name = "IES-WZ0204-V1.1",
+	.flash_sio = 1,
+	.isRTL8373 = 0,
+	.min_port = 3,
+	.max_port = 8,
+	.n_sfp = 2,
+	.log_to_phys_port = {0, 0, 0, 6, 1, 2, 3, 4, 5},
+	.phys_to_log_port = {4, 5, 6, 7, 8, 3, 0, 0, 0},
+	.is_sfp = {0, 0, 0, 2, 0, 0, 0, 0, 1},
+	/* Left SFP cage (physical port 5) = SDS1 */
+	.sfp_port[0].pin_detect = GPIO30_ACL_BIT3_EN,
+	.sfp_port[0].pin_los = GPIO37,
+	.sfp_port[0].pin_tx_disable = GPIO_NA,
+	.sfp_port[0].sds = 1,
+	.sfp_port[0].i2c = I2CBUS( GPIO39_I2C_SDA4, GPIO40_I2C_SCL3_MDC1 ),
+	/* Right SFP cage (physical port 6) = SDS0 */
+	.sfp_port[1].pin_detect = GPIO50_I2C_SCL2_UART1_TX,
+	.sfp_port[1].pin_los = GPIO10_LED10,
+	.sfp_port[1].pin_tx_disable = GPIO_NA,
+	.sfp_port[1].sds = 0,
+	.sfp_port[1].i2c = I2CBUS( GPIO41_I2C_SDA3_MDIO1, GPIO40_I2C_SCL3_MDC1 ),
+	.reset_pin = GPIO_NA,
+	/* The VLAN switch pulls GPIO31 to ground when engaged. On this board that
+	 * pin is UART0 TX and no serial console is brought out, so reading it as a
+	 * plain GPIO costs nothing - see GPIO31_UART0_TX in rtl837x_pins.c. */
+	.pin_mode_vlan = GPIO31_UART0_TX,
+	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
+	.port_led_set = { 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	/* LED pads, measured on the board. The ASIC default pad->LED-ID mux already
+	 * matches this board - each LED's pad is assigned to its own port - so the
+	 * copper ports need nothing. The one change is the two SFP cages' upper
+	 * LEDs (pads 9 and 24): they sit on index 0, the shared link/activity
+	 * entry, while the stock firmware shows link on the upper LED and activity
+	 * on the lower one. Pointing them at index 1 gives a solid upper LED at
+	 * 10G and leaves the copper ports alone. */
+	.led_mux_custom = 1,
+	.led_mux = {
+		0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f,
+		0x0f, 0x0d, 0x0d, 0x0e, 0x10, 0x11, 0x12, 0x14,
+		0x15, 0x16, 0x18, 0x19, 0x1a, 0x1c, 0x1d, 0x1e,
+		0x21, 0x21, 0x22, 0x23,
+	},
+	/* Index 2 is used by the two SFP cages' lower LEDs only (pads 11 and 26),
+	 * so it can carry the SFP's own conditions. The inherited value, 1G | LINK,
+	 * never matches a 10G link - which is precisely why both lower LEDs stayed
+	 * dark with a 10G module fitted. */
+	.led_sets = { { LEDS_2G5 | LEDS_1G | LEDS_100M | LEDS_10M | LEDS_LINK | LEDS_ACT | LEDS_10G,
+			LEDS_2G5 | LEDS_LINK | LEDS_10G,
+			LEDS_2G5 | LEDS_1G | LEDS_10G | LEDS_LINK | LEDS_ACT,
+			0 },
+		    },
+};
+
 #else
 	#error "Please select a machine type in machine.h"
 #endif
