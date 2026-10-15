@@ -123,21 +123,23 @@ follows the transmitted data instead of the switch. So the pin cannot be sampled
 reliably at an arbitrary moment, and shorting a driven output is a hardware
 concern in itself.
 
-Options, none of them free — except that the board has **no serial console exposed
-at all** (no through-holes; the only way in is the web UI), which changes the
-trade-off:
+**Implemented.** The board exposes **no serial console at all** (no through-holes;
+the web UI is the only way in), so giving up the UART function on GPIO31 costs
+nothing here. The target therefore clears `PIN_MUX_1` bit 0 — `gpio_mux_setup()`
+gained a `GPIO31_UART0_TX` case for it — which makes the pin a plain GPIO. That
+removes both the readback conflict and the shorting concern, since a closed
+switch would otherwise pull the UART output to ground on every byte transmitted.
 
-1. **Read GPIO31 anyway**, requiring two reads to agree so a UART frame in
-   flight is discarded. Keeps the UART alive for anyone who later solders to the
-   package. Leaves the electrical question open: with the switch closed, every
-   transmitted byte is shorted to ground.
-2. **Clear `PIN_MUX_1` bit 0** so the pin is a plain GPIO and the UART no longer
-   drives it. Because the serial console is unreachable on this board anyway,
-   this costs nothing in practice — the web UI is unaffected — and it removes
-   both the readback conflict and the shorting concern. **Preferred.**
-3. Leave the VLAN switch unimplemented and document it as such.
+The switch is read **once, after `execute_config()`**, not in
+`machine_custom_init()`: `port_l2_setup()` writes the isolation masks first and
+the configuration replay overwrites them, so the switch has to be the last writer.
+Each group gets its own ports plus the CPU port, so management stays reachable.
+Behaviour is one-directional — flipping the switch on always has a visible effect,
+and a saved configuration is never permanently shadowed by a switch position.
+`main()` prints one line, `Mode switch: VLAN=on|off`, so it is visible what was
+applied.
 
-The 10G switch needs no such decision, see above: no GPIO tracked it.
+The 10G switch needs no such work, see above: no GPIO tracked it.
 
 ### SFP LEDs: this board has two per cage
 
