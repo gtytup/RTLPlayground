@@ -89,6 +89,11 @@ struct machine {
 	// sfp_port[0] is the first SFP-port from the left on the device, sfp_port[1] the next if present 
 	struct sfp_port sfp_port[2];
 	uint8_t reset_pin;
+	/* Slide switch that isolates the copper ports from the SFP+ cages when it is
+	 * closed to ground; GPIO_NA on boards without one. Sampled after the startup
+	 * configuration has been replayed and then polled, so it takes effect both
+	 * at boot and while the switch is running. */
+	uint8_t pin_mode_vlan;
 	struct high_leds high_leds;
 	// Defines which led-set (0-3) will be used for given logical port
 	// led-set is physical group of LEDs that can be configured to show different port status combinations (see port_led_set below)
