@@ -338,6 +338,38 @@ together. If the second SFP LED is among them, its pad is reachable through the
 pad→LED-ID mux and a custom `led_mux` is the fix; if nothing changes, it is not
 an LED-controller pad at all.
 
+### Pad-group to LED map (measured)
+
+Each `LED_GLB_MUX_n` register carries five pads. Pointing **every pad** at
+`LED-ID 33` (port 8, index 1 — a port that is linked at 10G, so the condition is
+true) and writing the registers one at a time lights the whole board, register by
+register. Result:
+
+| Register | Pads | Physical LEDs that came on |
+|----------|------|----------------------------|
+| `LED_GLB_MUX_1` `0x65e0` | 0–4 | none |
+| `LED_GLB_MUX_2` `0x65e4` | 5–9 | right cage, upper LED |
+| `LED_GLB_MUX_3` `0x65e8` | 10–14 | copper 1 both LEDs, right cage lower LED |
+| `LED_GLB_MUX_4` `0x65ec` | 15–19 | copper 2 and copper 3, both LEDs each |
+| `LED_GLB_MUX_5` `0x65f0` | 20–24 | copper 4 both LEDs, left cage upper LED |
+| `LED_GLB_MUX_6` `0x65f4` | 25–27 | left cage lower LED |
+
+The counts reconcile exactly with the hardware: 4 copper ports × 2 LEDs plus 2
+cages × 2 LEDs = **12 LEDs**, and the groups above account for 1 + 3 + 4 + 3 + 1
+= 12.
+
+Consequences:
+
+- **The second SFP LED is an LED-controller pad and it is reachable.** Forcing its
+  pad to another LED-ID lights it, so the fix is a custom `led_mux`, not a
+  different driver. This also retires the module-present theory: the right cage's
+  upper LED lit with **no module fitted**.
+- The pads are **not** grouped the way the ASIC default mux assumes: the LED
+  groups cut across `LED_GLB_MUX` registers and mix copper and cage LEDs. That is
+  why the default mux, which the sibling board is happy with, cannot drive this
+  board's second cage LED.
+- The left cage's lower LED is pad 25, 26 or 27.
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
