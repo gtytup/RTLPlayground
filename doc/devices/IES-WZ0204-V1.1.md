@@ -130,9 +130,14 @@ gained a `GPIO31_UART0_TX` case for it — which makes the pin a plain GPIO. Tha
 removes both the readback conflict and the shorting concern, since a closed
 switch would otherwise pull the UART output to ground on every byte transmitted.
 
-The switch is read **once, after `execute_config()`**, not in
+The switch is sampled **after `execute_config()`**, not in
 `machine_custom_init()`: `port_l2_setup()` writes the isolation masks first and
 the configuration replay overwrites them, so the switch has to be the last writer.
+It is then polled once a second — a slide switch that only takes effect after a
+reboot reads as broken, and flipping it on a running switch is what people
+actually do. The masks the configuration asked for are saved at start-up, so
+releasing the switch restores them instead of leaving the configuration shadowed
+forever.
 A copper port's mask holds itself and the SFP+
 cages; a cage's mask holds every port. Both directions have to be allowed or the
 path through a cage breaks. The CPU port stays in every mask, so management
