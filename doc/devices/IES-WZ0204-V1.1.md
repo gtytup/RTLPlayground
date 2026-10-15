@@ -398,6 +398,43 @@ mask equalled the value, which only happens when `gpio_last_value` is still zero
 compiled `0x77ffff40` and **pad 27 was disabled again**, so anything depending on
 pad 27 needs `regset 65dc ffffffff` re-applied and no reboot in between.
 
+### SFP LEDs: solved
+
+**Pad map (measured).** Each LED's pad was found by pointing one pad at a time
+at a known-good LED-ID. The ASIC default pad→LED-ID mux already matches this
+board — every LED's pad is assigned to its own port:
+
+| LED | Pad | Default LED-ID | (port, index) |
+|-----|-----|----------------|---------------|
+| copper 1 left / right | 12 / 13 | 16 / 17 | port 4 idx0 / idx1 |
+| copper 2 | 15 / 16 | 20 / 21 | port 5 idx0 / idx1 |
+| copper 3 | 18 / 19 | 24 / 25 | port 6 idx0 / idx1 |
+| copper 4 | 21 / 22 | 28 / 29 | port 7 idx0 / idx1 |
+| right cage upper / lower | 9 / 11 | 12 / **14** | port 3 idx0 / **idx2** |
+| left cage upper / lower | 24 / 26 | 32 / **34** | port 8 idx0 / **idx2** |
+
+**Root cause.** Both cage lower LEDs sit on **index 2**, whose inherited
+condition is `LEDS_1G | LEDS_LINK`. An LED entry only lights when the link speed
+matches one of its speed bits, so `1G` never matches a 10G module and both lower
+LEDs stayed dark — no mux change and no missing pad enable was involved, and
+pads 11 and 26 were enabled all along.
+
+**Fix**, applied to the target:
+
+1. `led_sets[0][2]` becomes `LEDS_2G5 | LEDS_1G | LEDS_10G | LEDS_LINK | LEDS_ACT`.
+   Index 2 is used only by those two pads — every copper LED is on index 0 or 1 —
+   so the change cannot disturb the copper ports.
+2. `led_mux_custom = 1` with a `led_mux[]` that points pads 9 and 24 at index 1.
+   That is a behavioural match for the stock firmware, which shows a *solid*
+   upper LED (link) and a *blinking* lower one (activity): index 1 has no `ACT`
+   bit, so the upper LED is solid, while index 2 now has `ACT` and blinks. The
+   rest of `led_mux[]` is the measured default.
+
+### Superseded: the search for the second SFP LED
+
+The sections below record how this was worked out and are kept for the method
+(pad readback, `regset` probing, the speed-gating rule these sections describe).
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every

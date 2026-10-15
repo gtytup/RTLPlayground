@@ -187,9 +187,27 @@ __code const struct machine machine = {
 	.reset_pin = GPIO_NA,
 	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
 	.port_led_set = { 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	/* LED pads, measured on the board. The ASIC default pad->LED-ID mux already
+	 * matches this board - each LED's pad is assigned to its own port - so the
+	 * copper ports need nothing. The one change is the two SFP cages' upper
+	 * LEDs (pads 9 and 24): they sit on index 0, the shared link/activity
+	 * entry, while the stock firmware shows link on the upper LED and activity
+	 * on the lower one. Pointing them at index 1 gives a solid upper LED at
+	 * 10G and leaves the copper ports alone. */
+	.led_mux_custom = 1,
+	.led_mux = {
+		0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f,
+		0x0f, 0x0d, 0x0d, 0x0e, 0x10, 0x11, 0x12, 0x14,
+		0x15, 0x16, 0x18, 0x19, 0x1a, 0x1c, 0x1d, 0x1e,
+		0x21, 0x21, 0x22, 0x23,
+	},
+	/* Index 2 is used by the two SFP cages' lower LEDs only (pads 11 and 26),
+	 * so it can carry the SFP's own conditions. The inherited value, 1G | LINK,
+	 * never matches a 10G link - which is precisely why both lower LEDs stayed
+	 * dark with a 10G module fitted. */
 	.led_sets = { { LEDS_2G5 | LEDS_1G | LEDS_100M | LEDS_10M | LEDS_LINK | LEDS_ACT | LEDS_10G,
 			LEDS_2G5 | LEDS_LINK | LEDS_10G,
-			LEDS_1G | LEDS_LINK,
+			LEDS_2G5 | LEDS_1G | LEDS_10G | LEDS_LINK | LEDS_ACT,
 			0 },
 		    },
 };
