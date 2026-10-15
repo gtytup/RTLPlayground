@@ -185,6 +185,10 @@ __code const struct machine machine = {
 	.sfp_port[1].sds = 0,
 	.sfp_port[1].i2c = I2CBUS( GPIO41_I2C_SDA3_MDIO1, GPIO40_I2C_SCL3_MDC1 ),
 	.reset_pin = GPIO_NA,
+	/* The VLAN switch pulls GPIO31 to ground when engaged. On this board that
+	 * pin is UART0 TX and no serial console is brought out, so reading it as a
+	 * plain GPIO costs nothing - see GPIO31_UART0_TX in rtl837x_pins.c. */
+	.pin_mode_vlan = GPIO31_UART0_TX,
 	.high_leds = { .mux = LED_27 | LED_29, .enable = LED_28_SYS | LED_29 },
 	.port_led_set = { 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	/* LED pads, measured on the board. The ASIC default pad->LED-ID mux already

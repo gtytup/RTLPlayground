@@ -1703,6 +1703,48 @@ void check_and_flash_update_image(void)
 
 
 
+/*
+ * Apply the board's mode switch, if it has one.
+ *
+ * Sampled once, after the startup configuration has been replayed: the
+ * isolation masks are written by port_l2_setup() first and overwritten by
+ * execute_config() afterwards, so the switch has to be the last writer.
+ *
+ * One-directional: only the engaged position changes anything. Flipping the
+ * switch on always has a visible effect, and a saved configuration is never
+ * permanently shadowed by a switch position.
+ */
+void mode_switch_apply(void)
+{
+	uint16_t copper = PMASK_CPU;
+	uint16_t sfp = PMASK_CPU;
+	uint8_t port;
+
+	if (machine.pin_mode_vlan == GPIO_NA)
+		return;
+
+	gpio_input_setup(machine.pin_mode_vlan);
+
+	print_string("Mode switch: VLAN=");
+	if (gpio_pin_test(machine.pin_mode_vlan)) {
+		print_string("off\n");
+		return;
+	}
+	print_string("on\n");
+
+	for (port = machine.min_port; port <= machine.max_port; port++) {
+		if (machine.is_sfp[port])
+			sfp |= ((uint16_t)1) << port;
+		else
+			copper |= ((uint16_t)1) << port;
+	}
+	/* Each group forwards within itself and to the CPU port, which keeps the
+	 * management plane reachable; the two groups cannot reach each other. */
+	for (port = machine.min_port; port <= machine.max_port; port++)
+		port_isolate(port, machine.is_sfp[port] ? sfp : copper);
+}
+
+
 void main(void)
 {
 	ticks = 0;
@@ -1878,6 +1920,7 @@ void main(void)
 	early_boot_handle_button();
 
 	execute_config();
+	mode_switch_apply();
 	// After the config so the entry lands in the final management VLAN
 	port_l2_static_mgmt(uip_ethaddr.addr, management_vlan, false);
 	/* After the config: a name from it wins, otherwise derive one. */
