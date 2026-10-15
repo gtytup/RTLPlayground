@@ -1738,10 +1738,16 @@ void mode_switch_apply(void)
 		else
 			copper |= ((uint16_t)1) << port;
 	}
-	/* Each group forwards within itself and to the CPU port, which keeps the
-	 * management plane reachable; the two groups cannot reach each other. */
-	for (port = machine.min_port; port <= machine.max_port; port++)
-		port_isolate(port, machine.is_sfp[port] ? sfp : copper);
+	/* The copper ports are isolated from *each other*, while every one of them
+	 * may still reach the SFP+ cages, and the cages may reach all copper
+	 * ports - both directions have to be allowed or the path breaks. The CPU
+	 * port stays in every mask so management remains reachable. */
+	for (port = machine.min_port; port <= machine.max_port; port++) {
+		if (machine.is_sfp[port])
+			port_isolate(port, copper | sfp);
+		else
+			port_isolate(port, (((uint16_t)1) << port) | sfp);
+	}
 }
 
 
