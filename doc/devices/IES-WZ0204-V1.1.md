@@ -289,6 +289,55 @@ checked).
 
 Reboot restores the compiled configuration.
 
+### SFP slot 1 verified
+
+```
+> sfp
+Slot 1 - Rate: 67  Encoding: 06
+FINISAR CORP.   FCBG110SD1C05-1RA
+Options: 00
+Slot 2 - empty
+```
+
+Slot 1 is `sfp_port[0]`, the left cage. The module's EEPROM was read and decoded,
+which confirms for the first time on this board that the inherited settings work:
+
+| Setting | Value | Status |
+|---------|-------|--------|
+| `pin_detect` | GPIO30 | **works** — the module was noticed |
+| I²C (SDA4 / SCL3) | GPIO39 / GPIO40 | **works** — vendor and model came back |
+| rate 0x67 = 103 × 100 Mbit ≈ 10.3 Gbit | 10G | maps to `SDS_10GR`, so the link is set up as 10G |
+| encoding 0x06 | 64b/66b | consistent with 10G |
+
+`FCBG110SD1C05-1RA` is a Finisar 10G SFP+ active optical cable, so the left cage
+runs a 10G link.
+
+Two consequences:
+
+- **Slot 2 (right cage) is empty, so its LEDs being dark is correct.** Any LED
+  investigation has to happen on the populated cage.
+- The right cage's `pin_detect`, `pin_los` and I²C settings remain unverified —
+  they are inherited and have never been exercised.
+
+Because slot 1 links at 10G and all four LED-set 0 entries are programmed to
+`LINK | ACT` during the investigation, port 8 is a known-true reference and is a
+better target for the reachability test below than the copper port.
+
+```
+regset 65dc ffffffff                # enable all pads
+regset 65e0 21861861                # all pads -> LED-ID 33 = port 8 index 1
+regset 65e4 21861861
+regset 65e8 21861861
+regset 65ec 21861861
+regset 65f0 21861861
+regset 65f4 21861861
+```
+
+Every wired LED on the board should then show port 8's state, i.e. light up
+together. If the second SFP LED is among them, its pad is reachable through the
+pad→LED-ID mux and a custom `led_mux` is the fix; if nothing changes, it is not
+an LED-controller pad at all.
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
