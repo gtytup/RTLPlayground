@@ -17,8 +17,11 @@ Also carries two slide switches, one of which is used by this target, see
 ### What works
 
 - All four 2.5GBASE-T RJ45 ports
-- The left SFP+ cage at 10G, and its I²C/DDM (verified with a Finisar
-  `FCBG110SD1C05-1RA`, a 10G SFP+ active optical cable)
+- The left SFP+ cage **at 10G and at 1G**, with its I²C/DDM working. Verified with a
+  Finisar `FCBG110SD1C05-1RA` (a 10G SFP+ active optical cable) and with an ETU
+  `ESB3512-3SCD20` 1G module, in both cases with the link up. `regget 7b20`
+  confirms the rate comes from the module's EEPROM: bits 5-9 (SDS 1, the left
+  cage) read `0x04`, i.e. 1000BX_FIBER, with the 1G module fitted.
 - Copper LEDs and both cage LEDs
 - The VLAN mode switch, at boot and while running
 - Management over the web UI at 115200-independent `192.168.10.247`
@@ -27,7 +30,6 @@ Also carries two slide switches, one of which is used by this target, see
 
 - The right SFP+ cage: its `pin_detect`, `pin_los`, I²C bus and SerDes have
   never been exercised, no module has been fitted to it.
-- Which cage is logical 8 and which is logical 3.
 - Copper 1 and 4 of the port order. Copper 2 and 3 were confirmed by watching
   which LEDs move when the management cable is moved between them.
 
@@ -68,7 +70,16 @@ boot log cannot be watched. Everything is done over the web UI.
 
 Copper ports 1–4 match the GW-9000-6XH-X2 V1.1 layout, and the two SFP+ cages are
 wired the other way round compared to that board: physical port 5 is on SDS1 and
-physical port 6 on SDS0. Only copper 2 and 3 have been confirmed so far.
+physical port 6 on SDS0.
+
+Which cage is which is confirmed independently of this table: each cage's lower
+LED is wired to the pad whose LED-ID names that port — pad 26 = port 8 for the
+left cage, pad 11 = port 3 for the right one, see the pad map under *LEDs*. A
+module in the left cage also reports as slot 1, which is `sfp_port[0]`, the one
+this table calls logical 8.
+
+Of the copper ports only 2 and 3 have been confirmed, by watching which LEDs move
+when the management cable is moved between them.
 
 ### LEDs
 
@@ -127,10 +138,21 @@ There is a second pin involved, unrelated to the switch: `GPIO54` reads low
 permanently, as it does on the boards above, so `reset_pin` stays `GPIO_NA`. The
 board has no reset button.
 
-**10G switch: not a GPIO.** It was flipped repeatedly with the SFP cages empty and
-no other bit in the GPIO input registers ever moved, so the ASIC must sample it
-itself — it is a hardware strap and needs no firmware support. RTLPlayground
-honours it as it stands.
+**10G switch: not a GPIO, and no effect under RTLPlayground.** It was flipped
+repeatedly with the SFP cages empty and no bit in the GPIO input registers ever
+moved, so it is not a readable GPIO.
+
+What it actually does was settled with a **1G** module, the only rate that can
+tell "force 10G" apart from "adaptive": `regget 7b20`
+(`RTL837X_REG_SDS_MODES`, bits 0-4 = SDS 0, bits 5-9 = SDS 1) reads `0x9f`, i.e.
+SDS 1 = `0x04` = 1000BX_FIBER, matching the 1G module. It reads exactly the same
+with the switch flipped while running, and after power cycles with the switch in
+each position. A forced-10G strap would have shown `0x1a` (10GR), or a link that
+never comes up with a 1G module. It does neither.
+
+The reason is structural: the firmware configures the SerDes from the module's
+EEPROM rate (`sfp.c`), so a hardware strap would be overwritten in any case. The
+switch is therefore deliberately not implemented.
 
 ### Machine target
 
