@@ -1467,17 +1467,19 @@ __code const struct machine machine = {
 #elif defined MACHINE_IES_WZ0204_V1_1
 /* IES-WZ0204-V1.1, industrial 4x2.5G + 2xSFP+ board (RTL8371B family).
  *
- * FIRST-PASS TARGET: everything below is inherited from
- * MACHINE_2G5F4_10G2_V1_01, which is the same class of board and is verified
- * working. The PCB is known to be different, so these items are explicitly
- * NOT verified on this board yet and have to be measured with the `gpio` and
- * `leds` console commands:
+ * The board is white-label and brings no serial console out, so everything was
+ * measured over the web UI's CLI (`gpio`, `leds`, `regget`, `sfp`).
  *
- *   - copper physical port order (physical 1-4)
- *   - which SFP cage is on SDS0 and which on SDS1
- *   - SFP pin_detect / pin_los GPIOs
- *   - LED-ID to LED-colour mapping
- *   - reset_pin (GPIO_NA assumed, no populated button seen yet)
+ * Verified on hardware: the LED pads below; the left cage's pin_detect and I2C
+ * bus, with both a Finisar 10G AOC and an ETU 1G module linking up and the
+ * SerDes following the module's rate; copper panels 2 and 3 of the port order;
+ * and the VLAN switch. Still open: the right cage's pin_detect, pin_los, I2C and
+ * SerDes, which no module has been fitted to, and copper panels 1 and 4.
+ *
+ * The board's "10G" slide switch is not wired to anything the firmware can see:
+ * no GPIO tracks it, and with a 1G module fitted the SerDes stays on the rate
+ * the module asks for whether the switch is engaged or not. Nothing is set for
+ * it, and `pin_mode_vlan` above is the only slide switch this target reads.
  *
  * flash_sio = 1 is not merely a fallback here: the fitted Boya BY25D40 (JEDEC
  * 0x68 0x40 0x13) offers 0x03/0x0B/0x3B reads but no 0xBB dual-I/O read, so
