@@ -430,6 +430,11 @@ pads 11 and 26 were enabled all along.
    bit, so the upper LED is solid, while index 2 now has `ACT` and blinks. The
    rest of `led_mux[]` is the measured default.
 
+**Verified on the board** (`v0.1.0-140aa80`): the power-on LED walk now covers
+both cage LEDs, in the same order as the copper ports — one lights, then the
+other, then everything goes dark. Lower cage LEDs taking part in that walk is the
+proof that they are driven now; before the fix they were not.
+
 ### Superseded: the search for the second SFP LED
 
 The sections below record how this was worked out and are kept for the method
