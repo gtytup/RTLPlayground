@@ -1260,6 +1260,10 @@ void check_links(void)
 //
 // An idle function that sleeps for 1 tick and does all the house-keeping
 //
+void mode_switch_poll(void);
+void mode_switch_init(void);
+
+
 static void handle_tick(void)
 {
 	if (sec_counter >= SYS_TICK_HZ) {
@@ -1291,6 +1295,7 @@ static void handle_tick(void)
 
 		// Check for button presses once a second
 		handle_button();
+		mode_switch_poll();
 		link_irq = 1;
 		// Age the ARP cache: uip_arp_timer() expects a 10 s cadence
 		if (++arp_age_secs >= 10) {
@@ -1704,20 +1709,74 @@ void check_and_flash_update_image(void)
 
 
 /*
- * Apply the board's mode switch, if it has one.
- *
- * Sampled once, after the startup configuration has been replayed: the
- * isolation masks are written by port_l2_setup() first and overwritten by
- * execute_config() afterwards, so the switch has to be the last writer.
- *
- * One-directional: only the engaged position changes anything. Flipping the
- * switch on always has a visible effect, and a saved configuration is never
- * permanently shadowed by a switch position.
+ * Mode switch state. The isolation masks the running configuration asked for
+ * are saved before the switch overrides them, so releasing the switch restores
+ * them instead of leaving the configuration shadowed.
  */
-void mode_switch_apply(void)
+static __xdata uint16_t mode_switch_saved[9];
+static __xdata uint8_t mode_switch_on;
+
+/* Write the isolation masks for the requested state: the switch's, or the ones
+ * the configuration had before it was engaged. */
+static void mode_switch_set(uint8_t on)
 {
 	uint16_t copper = PMASK_CPU;
 	uint16_t sfp = PMASK_CPU;
+	uint8_t port;
+
+	if (on) {
+		for (port = machine.min_port; port <= machine.max_port; port++) {
+			if (machine.is_sfp[port])
+				sfp |= ((uint16_t)1) << port;
+			else
+				copper |= ((uint16_t)1) << port;
+		}
+	}
+
+	/* The copper ports are isolated from *each other*, while every one of them
+	 * may still reach the SFP+ cages, and the cages may reach all copper ports
+	 * - both directions have to be allowed or the path through a cage breaks.
+	 * The CPU port stays in every mask so management remains reachable. */
+	for (port = machine.min_port; port <= machine.max_port; port++) {
+		if (!on)
+			port_isolate(port, mode_switch_saved[port]);
+		else if (machine.is_sfp[port])
+			port_isolate(port, copper | sfp);
+		else
+			port_isolate(port, (((uint16_t)1) << port) | sfp);
+	}
+	mode_switch_on = on;
+}
+
+/*
+ * Read the board's mode switch and make the isolation masks match it.
+ *
+ * Runs once at start-up, after the startup configuration has been replayed:
+ * the masks are written by port_l2_setup() first and overwritten by
+ * execute_config() afterwards, so this has to be the last writer. It then runs
+ * once a second, because a slide switch that only takes effect after a reboot
+ * reads as broken. Reading one pin and writing six registers is nothing next to
+ * the SFP and timer work already done at that cadence.
+ */
+void mode_switch_poll(void)
+{
+	uint8_t on;
+
+	if (machine.pin_mode_vlan == GPIO_NA)
+		return;
+
+	on = !gpio_pin_test(machine.pin_mode_vlan);
+	if (on == mode_switch_on)
+		return;
+
+	print_string("Mode switch: VLAN=");
+	print_string(on ? "on\n" : "off\n");
+	mode_switch_set(on);
+}
+
+/* One-time set-up: take the pin over and remember the configured masks. */
+void mode_switch_init(void)
+{
 	uint8_t port;
 
 	if (machine.pin_mode_vlan == GPIO_NA)
@@ -1725,29 +1784,13 @@ void mode_switch_apply(void)
 
 	gpio_input_setup(machine.pin_mode_vlan);
 
-	print_string("Mode switch: VLAN=");
-	if (gpio_pin_test(machine.pin_mode_vlan)) {
-		print_string("off\n");
-		return;
-	}
-	print_string("on\n");
+	for (port = machine.min_port; port <= machine.max_port; port++)
+		mode_switch_saved[port] = port_isolation_get(port);
 
-	for (port = machine.min_port; port <= machine.max_port; port++) {
-		if (machine.is_sfp[port])
-			sfp |= ((uint16_t)1) << port;
-		else
-			copper |= ((uint16_t)1) << port;
-	}
-	/* The copper ports are isolated from *each other*, while every one of them
-	 * may still reach the SFP+ cages, and the cages may reach all copper
-	 * ports - both directions have to be allowed or the path breaks. The CPU
-	 * port stays in every mask so management remains reachable. */
-	for (port = machine.min_port; port <= machine.max_port; port++) {
-		if (machine.is_sfp[port])
-			port_isolate(port, copper | sfp);
-		else
-			port_isolate(port, (((uint16_t)1) << port) | sfp);
-	}
+	/* Start from the released state and let poll() do the rest, so there is
+	 * only one place that writes the masks. */
+	mode_switch_on = 0;
+	mode_switch_poll();
 }
 
 
@@ -1926,7 +1969,7 @@ void main(void)
 	early_boot_handle_button();
 
 	execute_config();
-	mode_switch_apply();
+	mode_switch_init();
 	// After the config so the entry lands in the final management VLAN
 	port_l2_static_mgmt(uip_ethaddr.addr, management_vlan, false);
 	/* After the config: a name from it wins, otherwise derive one. */
