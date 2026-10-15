@@ -245,6 +245,50 @@ Verify with `gpio` while inserting a module: the bit that flips is that cage's
 detect pin. And run `sfp`, which reads the module EEPROM — if it prints a vendor
 and model, the detect pin and the I²C bus are both right.
 
+### Why the all-conditions test could not have worked
+
+`LED-ID = (port << 2) | index` is not just a label: it is the **port** whose LED
+state the pad displays. A pad assigned to port 7 shows port 7's LED state, not
+its own — so a pad whose LED-ID points at a **port without a link** can never
+light, whatever conditions are programmed into LED-set 0.
+
+The earlier test set all four conditions of set 0 to `LINK | ACT`, which only
+reaches pads assigned to a *linked* port. If this board's SFP LED pads are not
+mapped to the SFP LED ports in the ASIC default mux, the bottom LED is
+unreachable that way — which fits the observation exactly.
+
+That also implies the fix, if the pad is reachable at all: program the pad→LED-ID
+map ourselves (`led_mux_custom = 1` and `led_mux[]`), which no target on this
+family has needed so far.
+
+**Reachability test.** Point *every* pad at the LED-ID of a port that certainly
+has a link — the management copper port — and every wired LED on the board must
+light at once.
+
+```
+regset 65dc ffffffff                              # enable all 32 pads
+regset 65e0 10410410    # RTL837X_REG_LED_GLB_MUX_1
+regset 65e4 10410410    # ... 2
+regset 65e8 10410410    # ... 3
+regset 65ec 10410410    # ... 4
+regset 65f0 10410410    # ... 5
+regset 65f4 10410410    # ... 6
+```
+
+`0x10410410` sets all five 6-bit fields to `0x10` = LED-ID 16 = port 4 index 0,
+assuming the management cable is on the port this target calls physical 1. If it
+is on a different port, use that port's LED-ID: `(port << 2) | 0`, packed the same
+way (the packing is five 6-bit fields, bit 0 upwards: `v = Σ id << (6k)`; all
+`0x3f` reproduces the observed `0x3fffffff`, which is how the packing was
+checked).
+
+| Result | Conclusion |
+|--------|------------|
+| the bottom SFP LED now lights with the rest | its pad is reachable, the pad→LED-ID mux is the answer, and a custom `led_mux` fixes it |
+| nothing on the board changes | the pads are not reachable this way; the LED is not an LED-controller pad |
+
+Reboot restores the compiled configuration.
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
