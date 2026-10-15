@@ -370,6 +370,34 @@ Consequences:
   board's second cage LED.
 - The left cage's lower LED is pad 25, 26 or 27.
 
+### Reading the LED pads back
+
+LED pads can be read through `gpio`, which turns the two-state trick into a
+reliable probe: set every pad to a true LED-ID, read `gpio`, then set every pad
+unassigned (`0x3f`) and read again. The bits that move are driven by the mux.
+
+Measured, with all pads on `LED-ID 33` versus all pads unassigned:
+
+| | Pads reading 0 |
+|---|---|
+| all pads on a true LED-ID | 0–8, 10, 11, 13, 14, 16, 17, 19–26, 30 |
+| all pads unassigned | 9, 12, 15, 18, 25, 26, 30 |
+
+Two things follow:
+
+- **A lit LED means the pad sits low**, i.e. the controller sinks current. Pads
+  0–24 flip between the two states, so they really are mux-driven.
+- **Pads 25–29 do not flip at all**, and pads 9, 12, 15, 18 sit inverted with
+  respect to the rest. The `leds` dump only prints pads 0–27, so **pads 28 and 29
+  have never been examined** — and since the `LED_GLB_MUX_6` write *did* light the
+  left cage's lower LED, its pad is likely 28 or 29, not 25–27.
+
+**Caveat that invalidated one run:** in the first `gpio` of that pair the change
+mask equalled the value, which only happens when `gpio_last_value` is still zero
+— i.e. the board had just been rebooted. `LED_GLB_IO_EN` was therefore back at the
+compiled `0x77ffff40` and **pad 27 was disabled again**, so anything depending on
+pad 27 needs `regset 65dc ffffffff` re-applied and no reboot in between.
+
 ### SFP LEDs: the second one is still not found
 
 With **all four LED-set 0 entries set to `LINK | ACT` and pad 27 enabled**, every
