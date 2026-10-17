@@ -4,6 +4,13 @@
 
 ## Added
 
+- Devices
+  - Support the Ganwen GW-9000-6XH-X2, a rebranded `2M-PCB43-V1.1` board (the
+    KP-9000-6XH-X2 V1.1) fitted with a 4 MB Winbond W25Q32JV. New machine target
+    `MACHINE_GW_9000_6XH_X2_V1_1`, a symlink to the KP-9000-6XH-X2 V1.1 board
+    definition so the console, web UI and LLDP report the Ganwen model name, see
+    `doc/devices/KP-9000-6XH-X2.md`.
+
 - Web UI
   - Compress the embedded assets (minify + gzip) and switch to a single-page layout. #315
   - Replace the multi-page UI with a themed single-page app: light, dark and Selenized themes following the browser by default,
