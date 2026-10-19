@@ -52,7 +52,7 @@ For KP-9000-6XH-X2 / KP-9000-6XHML-X2 / Mokerlink 2G040210GSM devices, select
 the machine target by PCB revision. The ML/non-ML or managed/unmanaged label
 alone does not identify the wiring. The Ganwen GW-9000-6XH-X2 is the same
 `2M-PCB43-V1.1` board with a 4 MB flash and uses the
-`MACHINE_KP_9000_6XH_X2_V1_1` target, see [2M-PCB43-V1.1](devices/KP-9000-6XH-X2.md).
+`MACHINE_GW_9000_6XH_X2_V1_1` target, see [2M-PCB43-V1.1](devices/KP-9000-6XH-X2.md).
 
 Other device based on RTL8272/3 that may work are described here: [Up-N-Atoms 2.5 GBit RTL Switch hacking guide](https://github.com/up-n-atom/SWTG118AS)
 
