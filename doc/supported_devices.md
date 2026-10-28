@@ -7,6 +7,7 @@ The following devices have been tested and are fully working:
 | Binardat | 2G06-04210GSM   | No      | [PCB-SWTG024AS-A-2.0.1](devices/ONT-S207CW-62TS-SE.md)                    | 0.5M  | 4 + 2 |
 | Davuaz   | Da-K6501W       | No      | [PCB-K0501W-V2.0](devices/K0501W_V2_0.md)                                 |       | 5 + 1 |
 | FOXNEO   | FNS-1200P       | No      | [PCB-K0402W-U13-V2.0](devices/FNS-1200P.md)                               | 2M    | 4 + 2 |
+| Ganwen   | GW-9000-6XH-X2  | No      | [2M-PCB43-V1.1](devices/2M-PCB43-V1.1.md)                                 | 4M    | 4 + 2 |
 | Goalake  | IG108           | No      | [PB-2132](devices/PB-2132.md)                                             | 4M    | 8 + 1 |
 | GoodTop  | GT-ST018M       | Yes     | [SWTG018AS-A V2.0](devices/SWTG018AS_A_V2_0.md)                           | 2M    | 8 + 1 |
 | GoodTop  | GT-ST024M       | Yes     | [SWTG024AS-A V2.0.1](devices/SWTG024AS-A-V2.0.1_4C_2SFP.md)               | 2M    | 4 + 2 |
@@ -55,9 +56,11 @@ The following devices have been tested and are fully working:
 | Ztyuav   | Z-QWYT0402      | No      | [PCB-K0402WS-V3.0](devices/PCB-K0402WS-V3.0.md)                           |       | 4 + 2 |
 | ZoeRax   | HG0402XG        | No      | [HG0402XG_V1.1](devices/ZOERAX_HG0402XG_V1.1.md)                          | 1M    | 4 + 2 |
 
-For KP-9000-6XH-X2 / KP-9000-6XHML-X2 / Mokerlink 2G040210GSM devices, select
-the machine target by PCB revision. The ML/non-ML or managed/unmanaged label
-alone does not identify the wiring.
+For KP-9000-6XH-X2 / KP-9000-6XHML-X2 / Mokerlink 2G040210GSM / Ganwen
+`GW-9000-6XH-X2` devices, select the machine target by PCB revision. The
+ML/non-ML or managed/unmanaged label alone does not identify the wiring; the
+`GW-9000-6XH-X2` is the V1.1 board with a 4 MB flash, see
+[2M-PCB43-V1.1](devices/2M-PCB43-V1.1.md).
 
 Other device based on RTL8272/3 that may work are described here: [Up-N-Atoms 2.5 GBit RTL Switch hacking guide](https://github.com/up-n-atom/SWTG118AS)
 

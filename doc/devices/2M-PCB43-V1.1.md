@@ -1,7 +1,21 @@
-# 2G040210GSM
+# 2G040210GSM / GW-9000-6XH-X2
 
 The following is a documentation for the managed switch marked as `2G040210GSM`
-and sold by Mokerlink.
+and sold by Mokerlink, and for the unmanaged `GW-9000-6XH-X2` sold by Ganwen.
+Both carry the `2M-PCB43-V1.1` marking and are electrically identical; they
+differ only in the fitted flash chip. The PCB revision defines the wiring, see
+[KP-9000-6XH-X2](KP-9000-6XH-X2.md) for the other revisions.
+
+## Variants
+
+| Device | Flash | Machine target |
+| --- | --- | --- |
+| MokerLink `2G040210GSM` (web-managed) | 2 MB | `MACHINE_KP_9000_6XHML_X2_V1_1` |
+| Ganwen `GW-9000-6XH-X2` (unmanaged) | 4 MB Winbond `W25Q32JVSIQ` (JEDEC `EF 40 16`) | `MACHINE_GW_9000_6XH_X2_V1_1` |
+
+Both targets resolve to the same board definition: `machine/GW_9000_6XH_X2_V1_1.c`
+is a symlink to `machine/KP_9000_6XHML_X2.c`, so port order, SFP slots and LEDs
+are identical. The two images differ only in the model string and the CRC16.
 
 ### Label specifications
 
@@ -18,6 +32,11 @@ The device is fully supported:
 - LEDs work with the same indiciations as the OEM firmware (build with `make MACHINE=KP_9000_6XHML_X2_V1_1` if building yourself, or use the corresponding pre-compiled binary)
 - untested due to missing Hardware: SFP+ ports equipped with 1G or 2.5G SFPs.
 
+Verified on the Ganwen `GW-9000-6XH-X2` variant (build with
+`make MACHINE=GW_9000_6XH_X2_V1_1`): all four 2.5GBASE-T RJ45 ports in the right
+order, both SFP+ slots with 10G modules (Finisar `FCBG110SD1C05-1RA`), LEDs, the
+web interface and configuration stored in flash.
+
 ### Hardware overview
 Front
 
@@ -26,6 +45,26 @@ Front
 Label
 
 <img src="photos/2M-PCB43-V1.1-managed/2M-PCB43-V1.1-label.jpeg" width="300" />
+
+#### Ganwen GW-9000-6XH-X2
+
+Front side (copper `L`/`R` LED pairs, SFP `5`/`6` and the `P` power LED):
+
+<img src="photos/2M-PCB43-V1.1-managed/GW-9000-6XH-X2-front.jpg" width="300" />
+
+Label:
+
+<img src="photos/2M-PCB43-V1.1-managed/GW-9000-6XH-X2-label.jpg" width="300" />
+
+### Flash
+
+Both variants are flashed the same way. Note the different flash size: the
+Ganwen board is fitted with a **4 MB Winbond `W25Q32JVSIQ`** (JEDEC `EF 40 16`)
+instead of the 2 MB part, while RTLPlayground only uses the first 1 MB
+(`FIRMWARE_UPLOAD_START` is `0x80000`). The region above the firmware image keeps
+whatever the stock firmware left there, so **erase the whole chip when flashing**;
+a leftover that starts with `00 40` at `0x80000` is taken for a staged update
+image. No other flash setting differs, in particular no single-IO mode is needed.
 
 ### PCB overview
 
@@ -39,6 +78,12 @@ Top side
 Bottom
 
 <img src="photos/2M-PCB43-V1.1-managed/2M-PCB43-V1.1-bottom.jpeg" width="300" />
+
+Ganwen `GW-9000-6XH-X2`, top and bottom, same `2M-PCB43-V1.1` marking:
+
+<img src="photos/2M-PCB43-V1.1-managed/GW-9000-6XH-X2-pcb-top.jpg" width="300" />
+
+<img src="photos/2M-PCB43-V1.1-managed/GW-9000-6XH-X2-pcb-bottom.jpg" width="300" />
 
 ### J1, serial console
 
