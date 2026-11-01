@@ -41,8 +41,16 @@
 	 (scl_pin) == GPIO50_I2C_SCL2_UART1_TX ? 2 : \
 	 (scl_pin) == GPIO40_I2C_SCL3_MDC1 ? 3 : I2CBUS_INVALID)
 
+/* GPIO of the slide switch that isolates the copper ports (see pin_mode_vlan in
+ * struct machine). A board that has one defines MACHINE_PIN_MODE_VLAN in its own
+ * header, next to MACHINE_MODEL. */
+#ifndef MACHINE_PIN_MODE_VLAN
+#define MACHINE_PIN_MODE_VLAN GPIO_NA
+#endif
+
 #define MACHINE_COMMON_SETTING \
 	.machine_name = MACHINE_MODEL, \
-	.isRTL8373 = MACHINE_CHIPSET == RTL8373
+	.isRTL8373 = MACHINE_CHIPSET == RTL8373, \
+	.pin_mode_vlan = MACHINE_PIN_MODE_VLAN
 
 #endif
