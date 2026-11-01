@@ -62,6 +62,12 @@ static void gpio_mux_setup(uint8_t pin) __banked
 		case GPIO54_ACL_BIT2_EN:
 			reg_bit_clear(RTL837X_PIN_MUX_2, 2);
 			break;
+		case GPIO31_UART0_TX:
+			// Bit 0 muxes the UART0 TX function onto this pin. Clear it so a board
+			// that uses the pin for a mode switch can read it, and so a closed
+			// switch cannot short the UART output to ground.
+			reg_bit_clear(RTL837X_PIN_MUX_1, 0);
+			break;
 		case GPIO_NA:
 			print_string("Attemped to assign GPIO function to N/A pin!");
 			break;
