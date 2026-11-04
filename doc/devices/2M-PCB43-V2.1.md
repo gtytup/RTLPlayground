@@ -22,14 +22,15 @@ reliable indicator of PCB wiring. The PCB revision defines the hardware layout.
 
 | PCB silkscreen | Known labels / devices | Recommended machine target | Equivalent target | Legacy target |
 | --- | --- | --- | --- | --- |
-| `2M-PCB43-V1.1` | Mokerlink 2G040210GSM web-managed 4+2 switch | `MOKERLINK_2G040210GSM` | `KEEPLINK_KP_9000_6XH_V1_1` | `KEEPLINK_KP_9000_6XHML_X2` |
-| `2M-PCB43-V1.2` | `KP-9000-6XHML-X2` | `KEEPLINK_KP_9000_6XHML_V1_2` | `KEEPLINK_KP_9000_6XH_V1_2` | `KEEPLINK_KP_9000_6XHML_X2` |
-| `2M-PCB43-V2.1` | `KP-9000-6XH-X2`, `KP-9000-6XHML-X2` | `KEEPLINK_KP_9000_6XH_X2_V2_1` or `KEEPLINK_KP_9000_6XHML_V2_1` | same V2.1 layout | `KEEPLINK_KP_9000_6XH_X2` |
-
+| `2M-PCB43-V1.1` | Mokerlink 2G040210GSM web-managed 4+2 switch, Ganwen `GW-9000-6XH-X2` unmanaged (4 MB flash) | `MOKERLINK_2G040210GSM` / `GW_9000_6XH_X2_V1_1` | `KEEPLINK_KP_9000_6XH_V1_1` | `KEEPLINK_KP_9000_6XHML_X2` |
 The V1.1 and V1.2 boards currently use the same V1.x GPIO, SFP, port and LED
 layout. The V2.1 board uses a different V2.1 layout with custom LED muxing.
 Legacy targets are preserved for compatibility with already-tested devices, but
 new builds should prefer the explicit PCB-revision targets.
+
+`GW_9000_6XH_X2_V1_1` is the Ganwen rebrand of the V1.1 board: the same
+board definition under the Ganwen model name, with the 4 MB flash of that variant.
+Build and flash notes are in [2M-PCB43-V1.1](2M-PCB43-V1.1.md).
 
 ### What works
 
