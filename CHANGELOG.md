@@ -5,6 +5,16 @@
 ## Added
 
 - Devices
+  - Support the IES-WZ0204-V1.1, a white-label RTL8372 industrial 4x2.5G +
+    2xSFP+ board with a 512 KB Boya/BoHong `BY25D40` flash. It is a sibling of
+    the KP-9000-6XH-X2 (2M-PCB43-V1.1) with the two SFP+ cages wired the other way
+    round (physical 5 is on SDS1, physical 6 on SDS0), two LEDs per cage where the
+    sibling boards have one, no reset button and no serial console, and the fitted
+    BY25D40 cannot be read in DIO mode, so the target selects single-IO flash
+    reads (`flash_sio`). Its VLAN slide switch sits on the UART0 TX pin and
+    isolates the copper ports from each other while leaving the cages as a shared
+    uplink (`pin_mode_vlan`). New machine target `IES_WZ0204_V1_1`, see
+    `doc/devices/IES-WZ0204-V1.1.md`.
   - Support the hongyavision HYWS-SGT0204S (PCB marking `2G5F4_10G2_V1.01`), an
     RTL8372 based 4x2.5G + 2xSFP+ unmanaged switch with a 512 KB Bright Moon
     `T25S40` flash. It is a sibling of the KP-9000-6XH-X2 (2M-PCB43-V1.1) with
