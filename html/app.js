@@ -67,6 +67,7 @@ var LANG = {
         i_fw: "Firmware",
         i_built: "Built",
         i_hw: "Hardware",
+        i_pcb: "PCB",
         i_temp: "Temperature",
         i_flash: "Flash",
         i_syslog: "Syslog",
@@ -448,6 +449,7 @@ var LANG = {
         i_fw: "ファームウェア",
         i_built: "ビルド日",
         i_hw: "ハードウェア",
+        i_pcb: "PCB",
         i_temp: "温度",
         i_flash: "フラッシュ",
         i_syslog: "Syslog",
@@ -754,6 +756,7 @@ var LANG = {
         i_fw: "固件",
         i_built: "构建日期",
         i_hw: "硬件",
+        i_pcb: "PCB",
         i_temp: "温度",
         i_flash: "Flash",
         i_syslog: "Syslog",
@@ -1134,6 +1137,7 @@ var LANG = {
         i_fw: "Firmware",
         i_built: "Compilado",
         i_hw: "Hardware",
+        i_pcb: "PCB",
         i_flash: "Flash",
         i_syslog: "Syslog",
         p_state: "Estado",
@@ -1519,6 +1523,7 @@ var LANG = {
         i_fw: "Micro logiciel",
         i_built: "Compilé le",
         i_hw: "Matériel",
+        i_pcb: "PCB",
         i_temp: "Température",
         i_flash: "Taille Flash",
         i_syslog: "Journal système",
@@ -1865,6 +1870,7 @@ var LANG = {
         i_fw: "Firmware",
         i_built: "Erstellt",
         i_hw: "Hardware",
+        i_pcb: "PCB",
         i_temp: "Temperatur",
         i_flash: "Flash",
         i_syslog: "Syslog",
@@ -2370,7 +2376,7 @@ var CONF_CMDS = [
     /^pvid\s+\d+\s+\d+$/m,
     /^ingress(\s+\d+[tua])+$/, /^ingress\s+[tua]$/,
     /^port\s+\d+\s+(10m|100m|1g|2g5|5g|10g|auto|on|off)(\s+(half|full))?$/,
-    /^port\s+\d+\s+name\s+\S+$/,
+    /^port\s+\d+\s+name(\s+\S+)?$/,
     /^port\s+\d+\s+lldp\s+(permit|block)+$/,
     /^eee\s+(on|off)(\s+\d+)?(\s+(100m|1g|2g5))?$/,
     /^mirror(\s+\d+)(\s+\d+[tr]?)+$/, /^mirror\s+off$/,
@@ -2876,6 +2882,7 @@ function renderInfo() {
         ["i_fw", "sw_ver"],
         ["i_built", "build_date"],
         ["i_hw", "hw_ver"],
+        ["i_pcb", "pcb_ver"],
         ["i_temp", "chip_temp"],
         ["i_flash", "flash_size"],
         ["i_syslog", "syslog_server"]
@@ -3058,12 +3065,13 @@ function applyPort(i) {
     var en = $("pen" + i).checked;
     var spd = $("pspd" + i).value;
     var mtu = parseInt($("pmtu" + i).value, 10);
-    if (name && name !== (p.name || "")) {
-        if (!/^\S{1,15}$/.test(name)) {
+    var oldName = p.name || "";
+    if (name !== oldName) {
+        if (name && !/^\S{1,15}$/.test(name)) {
             toast(t("pt_name_err"), "err");
             return;
         }
-        cmds.push("port " + p.portNum + " name " + name);
+        cmds.push("port " + p.portNum + " name" + (name ? " " + name : ""));
     }
     if (!en) cmds.push("port " + p.portNum + " off");
     else if (p.isSFP) {
@@ -5163,6 +5171,10 @@ function mergeConf(base, texts) {
             }
             if (line === "ip dhcp") drop(/^(netmask|gw|dns server) /);
             if (!isConfCmd(line)) return;
+            if ((m = line.match(/^port (\d{1,2}) name$/))) {
+                drop(new RegExp("^port " + m[1] + " name( |$)"));
+                return;
+            }
             if ((m = line.match(/^ingress (.+)$/))) {
                 if (/^[tua]$/.test(m[1])) {
                     drop(/^ingress /);
