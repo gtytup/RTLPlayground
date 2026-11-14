@@ -19,7 +19,22 @@ the firmware.
 - **Power**: not recorded
 - **PCB marking**: `IES-WZ0204-V1.1`
 
-No photos of this unit have been taken yet.
+Case, front:
+
+<img src="photos/IES-WZ0204-V1.1/front.jpg" width="600" />
+
+The front panel is silkscreened `4-Ports 100M/1000M/2.5G Ethernet & 2-Ports
+1.25G/10G Fiber Switch`. The four RJ45 ports are numbered `1X`–`4X`, with `2.5G`
+above the speed LEDs and `Link/Act` above the link LEDs. The two cages are
+`FX1` (left) and `FX2` (right), so the cage this page calls *left* — the one that
+has been verified — is `FX1` as seen from the front. Each cage has two LEDs,
+immediately to its left. The two slide switches sit at the right-hand end,
+labelled `VLAN` and `10G Fiber`; the case edge reads `Industrial Ethernet Switch`
+and the rightmost LED is `PWR`.
+
+There is no brand or model nameplate anywhere on the case: the front panel is the
+only printed surface and it carries the generic description above, while
+`IES-WZ0204-V1.1` appears only on the PCB silkscreen.
 
 ### What works
 
@@ -52,7 +67,36 @@ No photos of this unit have been taken yet.
   SOP-8
 - Two slide switches on the case, labelled VLAN and 10G
 
-The chip sits under a heatsink, so the PHY is not identified.
+Top side:
+
+<img src="photos/IES-WZ0204-V1.1/pcb_top.jpg" width="600" />
+
+Bottom:
+
+<img src="photos/IES-WZ0204-V1.1/pcb_bottom.jpg" width="600" />
+
+The four RJ45 ports sit behind `MC-Tech NT24301S` magnetics (two marked
+`2317X`, two `2312X`). Their eight LEDs are `D1`–`D8`, each in series with a
+SOT-23 transistor marked `MC5`. The cages carry the silkscreen references `FX1`
+and `FX2`, plus cage LEDs `LED1` and `LED2` and `R55`/`R56` next to `LED1`.
+
+Read left to right with the ports facing the camera, the PCB prints `FX2` then
+`FX1`, while the case prints `FX1` then `FX2`; which PCB reference is the case's
+`FX1` is therefore left open rather than guessed. The *left* / *right* wording on
+this page always means as seen from the front, and it refers to the case print.
+
+The input side carries a 2-pin screw terminal (`J1`, behind a fuse holder), a
+4-pin pluggable terminal (`J2`), a yellow `TENTA` box capacitor, three blue disc
+capacitors, a `DV2` bridge rectifier and connector `J3`. The input is therefore
+rectified and filtered before the DC/DC stage rather than fed straight in, which
+is why nothing about the rated input is claimed here: the rear panel and the
+rating label have not been photographed yet, so the input voltage range is still
+**not recorded**.
+
+The switch chip sits under the heatsink (`U1`) in the centre of the top side, so
+neither the RTL8372's package marking nor the PHY beside it is readable. The
+bottom side is a plain four-layer ground pour with the `T1`–`T4` magnetics'
+terminations; nothing there is labelled with the SoC pinout.
 
 ### Port layout
 
