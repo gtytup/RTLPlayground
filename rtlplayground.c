@@ -141,6 +141,7 @@ __code const uint16_t bit_mask[16] = {
 
 
 __xdata uint8_t linkbits_last[4];
+__xdata uint8_t sys_led_phase;
 __xdata uint16_t link_changed;
 __xdata uint8_t linkbits_last_p89;
 // The main loop's event flags.
@@ -1179,6 +1180,11 @@ static void handle_tick(void)
 
 		// Check for button presses once a second
 		handle_button();
+#if MACHINE_SYS_LED_HEARTBEAT
+		/* Half a hertz heartbeat on the system LED */
+		sys_led_phase ^= 1;
+		set_sys_led_state(sys_led_phase ? SYS_LED_OFF : SYS_LED_ON);
+#endif
 		link_irq = 1;
 		// Age the ARP cache: uip_arp_timer() expects a 10 s cadence
 		if (++arp_age_secs >= 10) {
