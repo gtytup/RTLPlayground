@@ -1,0 +1,7 @@
+#ifndef _MACHINE_NPA_AP_7018_2_5G_H_
+#define _MACHINE_NPA_AP_7018_2_5G_H_
+
+#define MACHINE_MODEL "NPA AP-7018-2.5G"
+#define MACHINE_CHIPSET RTL8373
+
+#endif
