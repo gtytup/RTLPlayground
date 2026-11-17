@@ -26,6 +26,14 @@
 
 #include  MACHINE_INC(MACHINE_DEF_DIR,MACHINE_NAME.h)
 
+/* Set to 1 on boards whose case expects the system LED to blink once the
+ * firmware has booted. The blink is done from handle_tick() instead of with the
+ * hardware's SYS_LED_SLOW mode, because that mode does not drive the lamp on
+ * every board. */
+#ifndef MACHINE_SYS_LED_HEARTBEAT
+#define MACHINE_SYS_LED_HEARTBEAT 0
+#endif
+
 
 #ifndef MACHINE_CHIPSET
 #error "MACHINE_CHIPSET shall be defined in <machine>.h file"
