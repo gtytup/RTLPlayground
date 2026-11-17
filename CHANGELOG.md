@@ -11,6 +11,11 @@
     standalone but is not configurable, the per-port PoE LEDs and the reset
     button do not work. New machine target `MACHINE_S604GTP_2SX_SL`, see
     `doc/devices/RTL-4GT-2S+_V1.04.md`.
+  - Support the NPA `AP-7018-2.5G`, a second brand of the F7008-2.5GPOE-V1.2
+    board (RTL8373N + RTL8224N) with a 512 kB Puya `P25Q40SU` flash. The pin map
+    is the same as the 7018-2.5G, only the flash is smaller, which leaves no room
+    for a web update. New machine target `NPA_AP_7018_2_5G`, see
+    `doc/devices/F7008-2.5GPOE-V1.2.md`.
   - Support the hongyavision HYWS-SGT0204S (PCB marking `2G5F4_10G2_V1.01`), an
     RTL8372 based 4x2.5G + 2xSFP+ unmanaged switch with a 512 KB Bright Moon
     `T25S40` flash. It is a sibling of the KP-9000-6XH-X2 (2M-PCB43-V1.1) with
